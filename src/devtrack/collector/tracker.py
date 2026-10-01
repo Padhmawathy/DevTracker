@@ -1,6 +1,8 @@
 import time
 from datetime import datetime
 
+from devtrack.collector.idle import get_idle_seconds
+
 from devtrack.collector.foreground import get_active_window
 from devtrack.models.activity import Activity
 
@@ -21,11 +23,17 @@ def format_duration(seconds):
 
 
 class ActivityTracker:
-    def __init__(self, poll_interval=1):
+    def __init__(
+        self,
+        poll_interval=1,
+        idle_threshold=60,
+    ):
         self.poll_interval = poll_interval
+        self.idle_threshold = idle_threshold
+
         self.current_activity = None
         self.last_window = None
-
+        self.is_idle = False
     def start_activity(self, window):
         self.current_activity = Activity(
             process_name=window["process_name"],
@@ -60,12 +68,41 @@ class ActivityTracker:
             self.current_activity.to_dict()
         )
 
+    def enter_idle_state(self):
+        if self.current_activity:
+            self.finish_activity()
+
+        self.current_activity = None
+        self.last_window = None
+        self.is_idle = True
+
+        print("[IDLE] User became inactive")
+
+
+    def exit_idle_state(self):
+        self.is_idle = False
+
+        print("[ACTIVE] User returned")
     def run(self):
         print("DevTrack activity tracker started.")
         print("Press Ctrl+C to stop.\n")
 
         try:
             while True:
+
+                idle_seconds = get_idle_seconds()
+
+                if idle_seconds >= self.idle_threshold:
+
+                    if not self.is_idle:
+                        self.enter_idle_state()
+
+                    time.sleep(self.poll_interval)
+                    continue
+
+                if self.is_idle:
+                    self.exit_idle_state()
+
                 window = get_active_window()
 
                 if not window:

@@ -3,7 +3,8 @@ from devtrack.collector.tracker import ActivityTracker
 
 def main():
     tracker = ActivityTracker(
-        poll_interval=1
+        poll_interval=1,
+        idle_threshold=10,
     )
 
     tracker.run()
