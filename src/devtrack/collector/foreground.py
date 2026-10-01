@@ -1,7 +1,7 @@
 import psutil
 import win32gui
 import win32process
-
+from devtrack.collector.privacy import sanitize_window_title
 
 def get_active_window():
     hwnd = win32gui.GetForegroundWindow()
@@ -16,6 +16,10 @@ def get_active_window():
     try:
         process = psutil.Process(process_id)
 
+        window_title = sanitize_window_title(
+            process.name(),
+            window_title,
+        )
         return {
             "process_name": process.name(),
             "process_id": process_id,
