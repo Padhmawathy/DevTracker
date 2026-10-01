@@ -2,7 +2,7 @@ import time
 from datetime import datetime
 
 from devtrack.collector.idle import get_idle_seconds
-
+from devtrack.storage.json_store import JsonActivityStore
 from devtrack.collector.foreground import get_active_window
 from devtrack.models.activity import Activity
 
@@ -26,10 +26,12 @@ class ActivityTracker:
     def __init__(
         self,
         poll_interval=1,
-        idle_threshold=60,
+        idle_threshold=300,
+        store=None
     ):
         self.poll_interval = poll_interval
         self.idle_threshold = idle_threshold
+        self.store = store or JsonActivityStore()
 
         self.current_activity = None
         self.last_window = None
@@ -64,10 +66,11 @@ class ActivityTracker:
             f"{format_duration(self.current_activity.duration_seconds)}"
         )
 
-        print(
-            self.current_activity.to_dict()
+        self.store.save(
+            self.current_activity
         )
 
+        self.current_activity = None
     def enter_idle_state(self):
         if self.current_activity:
             self.finish_activity()
