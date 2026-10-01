@@ -2,7 +2,7 @@ import time
 from datetime import datetime
 
 from devtrack.collector.idle import get_idle_seconds
-from devtrack.storage.json_store import JsonActivityStore
+from devtrack.storage.sqlite_store import SQLiteActivityStore
 from devtrack.collector.foreground import get_active_window
 from devtrack.models.activity import Activity
 
@@ -31,7 +31,7 @@ class ActivityTracker:
     ):
         self.poll_interval = poll_interval
         self.idle_threshold = idle_threshold
-        self.store = store or JsonActivityStore()
+        self.store = store or SQLiteActivityStore()
 
         self.current_activity = None
         self.last_window = None
