@@ -70,10 +70,13 @@ class ActivityTracker:
 
     def enter_locked_state(self):
         if self.current_activity:
-            self.finish_activity()
+            self.finish_activity(
+                ended_at=datetime.now()
+            )
 
         self.current_activity = None
         self.last_window = None
+        
         self.is_locked = True
         self.is_idle = False
 
@@ -140,10 +143,21 @@ class ActivityTracker:
             self.exit_locked_state()
 
     def detect_tracking_gap(self):
-        now_time = time.monotonic()
+        now_monotonic = time.monotonic()
         now_datetime = datetime.now()
 
-        gap = now_time - self.last_poll_time
+        monotonic_gap = (
+            now_monotonic - self.last_poll_time
+        )
+
+        wall_clock_gap = (
+            now_datetime - self.last_poll_datetime
+        ).total_seconds()
+
+        gap = max(
+            monotonic_gap,
+            wall_clock_gap,
+        )
 
         if gap > self.max_poll_gap:
             print(
@@ -160,9 +174,9 @@ class ActivityTracker:
             self.last_window = None
             self.is_idle = False
 
-        self.last_poll_time = now_time
+        self.last_poll_time = now_monotonic
         self.last_poll_datetime = now_datetime
-        
+
     def enter_idle_state(self):
         if self.current_activity:
             self.finish_activity()
