@@ -9,6 +9,7 @@ BROWSER_PROCESSES = {
     "chrome.exe",
     "msedge.exe",
     "firefox.exe",
+    "brave.exe",
 }
 
 
@@ -33,10 +34,24 @@ def sanitize_browser_title(title: str) -> str:
         " - Microsoft Edge",
         " — Mozilla Firefox",
         " - Mozilla Firefox",
+        " - Brave",
     ]
 
     for separator in separators:
         if separator in title:
-            title = title.replace(separator, "")
+            title = title.endswith(separator, "")
 
     return title.strip()
+
+
+def normalize_window_title(process_name: str, title: str) -> str:
+    if not title:
+        return ""
+
+    process_name = process_name.lower()
+
+    # VS Code adds this marker when a file has unsaved changes.
+    if process_name == "code.exe":
+        title = title.lstrip("● ").strip()
+
+    return title
