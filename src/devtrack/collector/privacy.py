@@ -24,7 +24,6 @@ def sanitize_window_title(process_name: str, window_title: str) -> str:
 
     return window_title
 
-
 def sanitize_browser_title(title: str) -> str:
     if not title:
         return ""
@@ -38,12 +37,11 @@ def sanitize_browser_title(title: str) -> str:
     ]
 
     for separator in separators:
-        if separator in title:
-            title = title.endswith(separator, "")
+        if title.endswith(separator):
+            title = title[:-len(separator)]
+            break
 
     return title.strip()
-
-
 def normalize_window_title(process_name: str, title: str) -> str:
     if not title:
         return ""
