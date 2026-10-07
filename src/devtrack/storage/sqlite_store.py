@@ -108,7 +108,7 @@ class SQLiteActivityStore:
                 """
                 SELECT *
                 FROM activities
-                WHERE started_at >= ?
+                WHERE ended_at > ?
                   AND started_at < ?
                 ORDER BY started_at ASC
                 """,
