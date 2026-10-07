@@ -280,7 +280,52 @@ class TestSQLiteActivityStore(unittest.TestCase):
             summary["total_seconds"],
             90 * 60,
         )
+    def test_daily_application_usage(self):
+        first = self.create_activity(
+            "Code.exe",
+            datetime(2026, 10, 6, 9, 0, 0),
+            30 * 60,
+        )
 
+        second = self.create_activity(
+            "Code.exe",
+            datetime(2026, 10, 6, 10, 0, 0),
+            15 * 60,
+        )
+
+        third = self.create_activity(
+            "chrome.exe",
+            datetime(2026, 10, 6, 11, 0, 0),
+            45 * 60,
+        )
+
+        self.store.save(first)
+        self.store.save(second)
+        self.store.save(third)
+
+        rows = self.store.get_daily_application_usage(
+            date(2026, 10, 6)
+        )
+
+        self.assertEqual(len(rows), 2)
+
+        self.assertEqual(
+            rows[0]["process_name"],
+            "chrome.exe",
+        )
+        self.assertEqual(
+            rows[0]["total_seconds"],
+            45 * 60,
+        )
+
+        self.assertEqual(
+            rows[1]["process_name"],
+            "Code.exe",
+        )
+        self.assertEqual(
+            rows[1]["total_seconds"],
+            45 * 60,
+        )
 
 if __name__ == "__main__":
     unittest.main()

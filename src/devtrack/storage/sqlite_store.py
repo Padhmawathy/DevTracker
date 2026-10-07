@@ -176,7 +176,18 @@ class SQLiteActivityStore:
             dict(row)
             for row in rows
         ]
+    def get_daily_application_usage(self, day):
+        start_time = datetime.combine(
+            day,
+            datetime.min.time(),
+        )
 
+        end_time = start_time + timedelta(days=1)
+
+        return self.get_usage_summary(
+            start_time,
+            end_time,
+        )
     def get_daily_timeline(self, day):
         start_time = datetime.combine(
             day,
