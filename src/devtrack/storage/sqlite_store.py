@@ -1,16 +1,27 @@
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 
 class SQLiteActivityStore:
     def __init__(self, db_path="data/devtrack.db"):
         self.db_path = Path(db_path)
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        self.db_path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
 
         self._create_tables()
 
     def _connect(self):
-        return sqlite3.connect(self.db_path)
+        connection = sqlite3.connect(
+            self.db_path
+        )
+
+        connection.row_factory = sqlite3.Row
+
+        return connection
 
     def _create_tables(self):
         with self._connect() as connection:
@@ -28,9 +39,25 @@ class SQLiteActivityStore:
                 """
             )
 
+            connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS
+                idx_activities_started_at
+                ON activities(started_at)
+                """
+            )
+
+            connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS
+                idx_activities_process_name
+                ON activities(process_name)
+                """
+            )
+
     def save(self, activity):
         with self._connect() as connection:
-            connection.execute(
+            cursor = connection.execute(
                 """
                 INSERT INTO activities (
                     process_name,
@@ -51,3 +78,101 @@ class SQLiteActivityStore:
                     activity.duration_seconds,
                 ),
             )
+
+            return cursor.lastrowid
+
+    def get_recent(self, limit=20):
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT *
+                FROM activities
+                ORDER BY started_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+
+        return [
+            dict(row)
+            for row in rows
+        ]
+
+    def get_between(
+        self,
+        start_time: datetime,
+        end_time: datetime,
+    ):
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT *
+                FROM activities
+                WHERE started_at >= ?
+                  AND started_at < ?
+                ORDER BY started_at ASC
+                """,
+                (
+                    start_time.isoformat(),
+                    end_time.isoformat(),
+                ),
+            ).fetchall()
+
+        return [
+            dict(row)
+            for row in rows
+        ]
+
+    def get_by_process(
+        self,
+        process_name: str,
+        limit=100,
+    ):
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT *
+                FROM activities
+                WHERE LOWER(process_name) = LOWER(?)
+                ORDER BY started_at DESC
+                LIMIT ?
+                """,
+                (
+                    process_name,
+                    limit,
+                ),
+            ).fetchall()
+
+        return [
+            dict(row)
+            for row in rows
+        ]
+
+    def get_usage_summary(
+        self,
+        start_time: datetime,
+        end_time: datetime,
+    ):
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    process_name,
+                    SUM(duration_seconds) AS total_seconds,
+                    COUNT(*) AS activity_count
+                FROM activities
+                WHERE started_at >= ?
+                AND started_at < ?
+                GROUP BY process_name
+                ORDER BY total_seconds DESC
+                """,
+                (
+                    start_time.isoformat(),
+                    end_time.isoformat(),
+                ),
+            ).fetchall()
+
+        return [
+            dict(row)
+            for row in rows
+        ]
