@@ -43,9 +43,9 @@ class ActivityTracker:
         self.is_idle = False
         self.is_locked = False
 
-        self.lock_candidate = False
-        self.lock_candidate_count = 0
-        self.lock_confirmation_polls = 2
+        self.pending_lock_state = None
+        self.pending_lock_since = None
+        self.lock_confirmation_seconds = 3
 
         self.last_poll_time = time.monotonic()
         self.last_poll_datetime = datetime.now()
@@ -126,21 +126,33 @@ class ActivityTracker:
 
     def check_lock_state(self):
         detected_locked = is_workstation_locked()
+        now = time.monotonic()
 
-        if detected_locked == self.lock_candidate:
-            self.lock_candidate_count += 1
-        else:
-            self.lock_candidate = detected_locked
-            self.lock_candidate_count = 1
-
-        if self.lock_candidate_count < self.lock_confirmation_polls:
+        # Raw state matches our confirmed state.
+        if detected_locked == self.is_locked:
+            self.pending_lock_state = None
+            self.pending_lock_since = None
             return
 
-        if detected_locked and not self.is_locked:
-            self.enter_locked_state()
+        # A new possible state transition appeared.
+        if self.pending_lock_state != detected_locked:
+            self.pending_lock_state = detected_locked
+            self.pending_lock_since = now
+            return
 
-        elif not detected_locked and self.is_locked:
-            self.exit_locked_state()
+        # Require the new state to remain stable.
+        if (
+            self.pending_lock_since is not None
+            and now - self.pending_lock_since
+            >= self.lock_confirmation_seconds
+        ):
+            if detected_locked:
+                self.enter_locked_state()
+            else:
+                self.exit_locked_state()
+
+            self.pending_lock_state = None
+            self.pending_lock_since = None
 
     def detect_tracking_gap(self):
         now_monotonic = time.monotonic()
