@@ -201,6 +201,36 @@ class SQLiteActivityStore:
             end_time,
         )   
 
+    def get_daily_timeline_grouped(self, day):
+        activities = self.get_daily_timeline(day)
+
+        if not activities:
+            return []
+
+        grouped = []
+
+        for activity in activities:
+            if not grouped:
+                grouped.append(activity.copy())
+                continue
+
+            previous = grouped[-1]
+
+            if (
+                previous["process_name"]
+                == activity["process_name"]
+                and previous["ended_at"]
+                == activity["started_at"]
+            ):
+                previous["ended_at"] = activity["ended_at"]
+                previous["duration_seconds"] += (
+                    activity["duration_seconds"]
+                )
+            else:
+                grouped.append(activity.copy())
+
+        return grouped
+
     def get_daily_summary(self, day):
         activities = self.get_daily_timeline(day)
 
