@@ -124,6 +124,7 @@ class ActivityTracker:
         self.current_activity = None
 
 
+
     def check_lock_state(self):
         detected_locked = is_workstation_locked()
 
