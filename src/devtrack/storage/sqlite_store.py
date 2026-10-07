@@ -189,3 +189,31 @@ class SQLiteActivityStore:
             start_time,
             end_time,
         )   
+
+    def get_daily_summary(self, day):
+        activities = self.get_daily_timeline(day)
+
+        if not activities:
+            return {
+                "date": day.isoformat(),
+                "total_seconds": 0,
+                "activity_count": 0,
+                "application_count": 0,
+            }
+
+        applications = {
+            activity["process_name"]
+            for activity in activities
+        }
+
+        total_seconds = sum(
+            activity["duration_seconds"]
+            for activity in activities
+        )
+
+        return {
+            "date": day.isoformat(),
+            "total_seconds": total_seconds,
+            "activity_count": len(activities),
+            "application_count": len(applications),
+        }
