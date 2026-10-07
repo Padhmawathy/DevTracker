@@ -118,7 +118,38 @@ class TestSQLiteActivityStore(unittest.TestCase):
 
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["process_name"], "Code.exe")
+    def test_get_between_excludes_activity_ending_at_start(self):
+        activity = self.create_activity(
+            "Code.exe",
+            datetime(2026, 10, 6, 9, 50, 0),
+            10 * 60,
+        )
 
+        self.store.save(activity)
+
+        rows = self.store.get_between(
+            datetime(2026, 10, 6, 10, 0, 0),
+            datetime(2026, 10, 6, 11, 0, 0),
+        )
+
+        self.assertEqual(len(rows), 0)
+
+
+    def test_get_between_excludes_activity_starting_at_end(self):
+        activity = self.create_activity(
+            "Code.exe",
+            datetime(2026, 10, 6, 11, 0, 0),
+            10 * 60,
+        )
+
+        self.store.save(activity)
+
+        rows = self.store.get_between(
+            datetime(2026, 10, 6, 10, 0, 0),
+            datetime(2026, 10, 6, 11, 0, 0),
+        )
+
+        self.assertEqual(len(rows), 0)
     def test_get_by_process(self):
         first = self.create_activity(
             "Code.exe",
