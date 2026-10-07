@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 
@@ -176,3 +176,16 @@ class SQLiteActivityStore:
             dict(row)
             for row in rows
         ]
+
+    def get_daily_timeline(self, day):
+        start_time = datetime.combine(
+            day,
+            datetime.min.time(),
+        )
+
+        end_time = start_time + timedelta(days=1)
+
+        return self.get_between(
+            start_time,
+            end_time,
+        )   
