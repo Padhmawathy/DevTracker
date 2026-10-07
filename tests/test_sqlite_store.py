@@ -249,5 +249,38 @@ class TestSQLiteActivityStore(unittest.TestCase):
         self.assertEqual(summary["total_seconds"], 90)
 
 
+    def test_daily_summary_tracks_total_active_time(self):
+        first = self.create_activity(
+            "Code.exe",
+            datetime(2026, 10, 6, 9, 0, 0),
+            30 * 60,
+        )
+
+        second = self.create_activity(
+            "chrome.exe",
+            datetime(2026, 10, 6, 10, 0, 0),
+            45 * 60,
+        )
+
+        third = self.create_activity(
+            "Code.exe",
+            datetime(2026, 10, 6, 11, 0, 0),
+            15 * 60,
+        )
+
+        self.store.save(first)
+        self.store.save(second)
+        self.store.save(third)
+
+        summary = self.store.get_daily_summary(
+            date(2026, 10, 6)
+        )
+
+        self.assertEqual(
+            summary["total_seconds"],
+            90 * 60,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
