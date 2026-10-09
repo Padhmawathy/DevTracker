@@ -23,3 +23,12 @@ Thumbs.db
 # Private developer reports
 reports/
 my_reports/
+
+# Frontend dependencies and build output
+frontend/node_modules/
+frontend/dist/
+
+# Python cache
+__pycache__/
+*.pyc
+
