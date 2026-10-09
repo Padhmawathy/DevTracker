@@ -2,10 +2,20 @@
 from fastapi import FastAPI
 
 from devtrack.summary.service import DailySummaryService
-
+from pydantic import BaseModel, Field
+from devtrack.models.checkin import DeveloperCheckIn
+from devtrack.storage.checkin_store import SQLiteCheckInStore
 from datetime import date
 from fastapi import HTTPException
 from devtrack.journal.service import DailyJournalService
+
+
+class CheckInRequest(BaseModel):
+    project_name: str = Field(min_length=1)
+    work_description: str = Field(min_length=1)
+    category: str = "Other"
+    blocker: str | None = None
+
 app = FastAPI(
     title="DevTracker API",
     version="0.5.0",
@@ -18,8 +28,6 @@ def health():
         "status": "ok",
         "application": "DevTracker",
     }
-
-
 @app.get("/api/summary/today")
 def get_today_summary():
     service = DailySummaryService()
@@ -42,4 +50,59 @@ def get_daily_activity(day: str):
         "date": journal["date"],
         "activities": journal["activities"],
         "total_activities": len(journal["activities"]),
+    }
+
+
+
+@app.post("/api/checkins", status_code=201)
+def create_checkin(payload: CheckInRequest):
+    project_name = payload.project_name.strip()
+    work_description = payload.work_description.strip()
+    category = payload.category.strip() or "Other"
+
+    if not project_name or not work_description:
+        raise HTTPException(
+            status_code=422,
+            detail="Project name and work description are required.",
+        )
+
+    checkin = DeveloperCheckIn(
+        project_name=project_name,
+        work_description=work_description,
+        category=category,
+        blocker=payload.blocker.strip() or None
+        if payload.blocker is not None
+        else None,
+    )
+
+    store = SQLiteCheckInStore()
+    checkin_id = store.save(checkin)
+
+    return {
+        "id": checkin_id,
+        "project_name": checkin.project_name,
+        "work_description": checkin.work_description,
+        "category": checkin.category,
+        "blocker": checkin.blocker,
+        "created_at": checkin.created_at.isoformat(),
+    }
+
+
+@app.get("/api/checkins/{day}")
+def get_checkins(day: str):
+    try:
+        selected_day = date.fromisoformat(day)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid date. Use YYYY-MM-DD.",
+        )
+
+    store = SQLiteCheckInStore()
+    checkins = store.get_daily_checkins(selected_day)
+
+    return {
+        "date": selected_day.isoformat(),
+        "checkins": checkins,
+        "total_checkins": len(checkins),
     }
