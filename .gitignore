@@ -18,3 +18,8 @@ data/*
 
 Thumbs.db
 .DS_Store
+
+
+# Private developer reports
+reports/
+my_reports/
