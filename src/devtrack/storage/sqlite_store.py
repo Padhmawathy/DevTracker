@@ -1,16 +1,27 @@
 import sqlite3
+from datetime import datetime, timedelta
 from pathlib import Path
 
 
 class SQLiteActivityStore:
     def __init__(self, db_path="data/devtrack.db"):
         self.db_path = Path(db_path)
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        self.db_path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
 
         self._create_tables()
 
     def _connect(self):
-        return sqlite3.connect(self.db_path)
+        connection = sqlite3.connect(
+            self.db_path
+        )
+
+        connection.row_factory = sqlite3.Row
+
+        return connection
 
     def _create_tables(self):
         with self._connect() as connection:
@@ -28,9 +39,25 @@ class SQLiteActivityStore:
                 """
             )
 
+            connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS
+                idx_activities_started_at
+                ON activities(started_at)
+                """
+            )
+
+            connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS
+                idx_activities_process_name
+                ON activities(process_name)
+                """
+            )
+
     def save(self, activity):
         with self._connect() as connection:
-            connection.execute(
+            cursor = connection.execute(
                 """
                 INSERT INTO activities (
                     process_name,
@@ -51,3 +78,191 @@ class SQLiteActivityStore:
                     activity.duration_seconds,
                 ),
             )
+
+            return cursor.lastrowid
+
+    def get_recent(self, limit=20):
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT *
+                FROM activities
+                ORDER BY started_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+
+        return [
+            dict(row)
+            for row in rows
+        ]
+
+    def get_between(
+        self,
+        start_time: datetime,
+        end_time: datetime,
+    ):
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT *
+                FROM activities
+                WHERE ended_at > ?
+                  AND started_at < ?
+                ORDER BY started_at ASC
+                """,
+                (
+                    start_time.isoformat(),
+                    end_time.isoformat(),
+                ),
+            ).fetchall()
+
+        return [
+            dict(row)
+            for row in rows
+        ]
+
+    def get_by_process(
+        self,
+        process_name: str,
+        limit=100,
+    ):
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT *
+                FROM activities
+                WHERE LOWER(process_name) = LOWER(?)
+                ORDER BY started_at DESC
+                LIMIT ?
+                """,
+                (
+                    process_name,
+                    limit,
+                ),
+            ).fetchall()
+
+        return [
+            dict(row)
+            for row in rows
+        ]
+
+    def get_usage_summary(
+        self,
+        start_time: datetime,
+        end_time: datetime,
+    ):
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    process_name,
+                    SUM(duration_seconds) AS total_seconds,
+                    COUNT(*) AS activity_count
+                FROM activities
+                WHERE started_at >= ?
+                AND started_at < ?
+                GROUP BY process_name
+                ORDER BY total_seconds DESC
+                """,
+                (
+                    start_time.isoformat(),
+                    end_time.isoformat(),
+                ),
+            ).fetchall()
+
+        return [
+            dict(row)
+            for row in rows
+        ]
+    def get_daily_application_usage(self, day):
+        start_time = datetime.combine(
+            day,
+            datetime.min.time(),
+        )
+
+        end_time = start_time + timedelta(days=1)
+
+        return self.get_usage_summary(
+            start_time,
+            end_time,
+        )
+    def get_daily_timeline(self, day):
+        start_time = datetime.combine(
+            day,
+            datetime.min.time(),
+        )
+
+        end_time = start_time + timedelta(days=1)
+
+        return self.get_between(
+            start_time,
+            end_time,
+        )   
+
+    def get_daily_timeline_grouped(self, day):
+        activities = self.get_daily_timeline(day)
+
+        if not activities:
+            return []
+
+        grouped = []
+        max_gap_seconds = 2
+
+        for activity in activities:
+            if not grouped:
+                grouped.append(activity.copy())
+                continue
+
+            previous = grouped[-1]
+
+            previous_end = datetime.fromisoformat(
+                previous["ended_at"]
+            )
+            current_start = datetime.fromisoformat(
+                activity["started_at"]
+            )
+
+            gap_seconds = (
+                current_start - previous_end
+            ).total_seconds()
+
+            if (
+                previous["process_name"] == activity["process_name"]
+                and 0 <= gap_seconds <= max_gap_seconds
+            ):
+                previous["ended_at"] = activity["ended_at"]
+                previous["duration_seconds"] += activity["duration_seconds"]
+            else:
+                grouped.append(activity.copy())
+
+        return grouped
+
+    def get_daily_summary(self, day):
+        activities = self.get_daily_timeline(day)
+
+        if not activities:
+            return {
+                "date": day.isoformat(),
+                "total_seconds": 0,
+                "activity_count": 0,
+                "application_count": 0,
+            }
+
+        applications = {
+            activity["process_name"]
+            for activity in activities
+        }
+
+        total_seconds = sum(
+            activity["duration_seconds"]
+            for activity in activities
+        )
+
+        return {
+            "date": day.isoformat(),
+            "total_seconds": total_seconds,
+            "activity_count": len(activities),
+            "application_count": len(applications),
+        }
