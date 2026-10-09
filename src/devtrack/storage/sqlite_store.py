@@ -208,6 +208,7 @@ class SQLiteActivityStore:
             return []
 
         grouped = []
+        max_gap_seconds = 2
 
         for activity in activities:
             if not grouped:
@@ -216,16 +217,23 @@ class SQLiteActivityStore:
 
             previous = grouped[-1]
 
+            previous_end = datetime.fromisoformat(
+                previous["ended_at"]
+            )
+            current_start = datetime.fromisoformat(
+                activity["started_at"]
+            )
+
+            gap_seconds = (
+                current_start - previous_end
+            ).total_seconds()
+
             if (
-                previous["process_name"]
-                == activity["process_name"]
-                and previous["ended_at"]
-                == activity["started_at"]
+                previous["process_name"] == activity["process_name"]
+                and 0 <= gap_seconds <= max_gap_seconds
             ):
                 previous["ended_at"] = activity["ended_at"]
-                previous["duration_seconds"] += (
-                    activity["duration_seconds"]
-                )
+                previous["duration_seconds"] += activity["duration_seconds"]
             else:
                 grouped.append(activity.copy())
 

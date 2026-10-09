@@ -374,5 +374,55 @@ class TestSQLiteActivityStore(unittest.TestCase):
             15 * 60,
         )
 
+    def test_grouping_allows_small_gaps(self):
+        day = date(2026, 10, 9)
+
+        self.store.save(
+            self.create_activity(
+                "Code.exe",
+                datetime(2026, 10, 9, 10, 0, 0),
+                10,
+            )
+        )
+
+        self.store.save(
+            self.create_activity(
+                "Code.exe",
+                datetime(2026, 10, 9, 10, 0, 11),
+                10,
+            )
+        )
+
+        timeline = self.store.get_daily_timeline_grouped(day)
+
+        self.assertEqual(len(timeline), 1)
+        self.assertAlmostEqual(
+            timeline[0]["duration_seconds"], 20
+        )
+
+
+    def test_grouping_keeps_separate_sessions(self):
+        day = date(2026, 10, 9)
+
+        self.store.save(
+            self.create_activity(
+                "Code.exe",
+                datetime(2026, 10, 9, 10, 0, 0),
+                10,
+            )
+        )
+
+        self.store.save(
+            self.create_activity(
+                "Code.exe",
+                datetime(2026, 10, 9, 10, 0, 15),
+                10,
+            )
+        )
+
+        timeline = self.store.get_daily_timeline_grouped(day)
+
+        self.assertEqual(len(timeline), 2)
+
 if __name__ == "__main__":
     unittest.main()
