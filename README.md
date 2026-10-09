@@ -196,3 +196,62 @@ Developer check-ins are entered manually. The reminder service does not automati
 - Snooze prompts can block the reminder loop until answered.
 - Daily journals are currently displayed in the terminal.
 - Work descriptions are not automatically inferred from application activity.
+
+
+
+## Phase 4 — Developer Work Summaries
+
+DevTracker converts recorded application activity and
+developer check-ins into structured daily work reports.
+
+### Features
+
+- Generate daily work summaries
+- Group recorded work by project
+- Display work categories and blockers
+- Summarize application usage and tracked time
+- Export reports as Markdown files
+- Generate reports for specific dates
+- Choose a custom report output directory
+
+### Generate a Daily Report
+
+```cmd
+python -m devtrack.summary_cli
+```
+
+Generate a report for a specific date:
+
+```cmd
+python -m devtrack.summary_cli --date 2026-10-09
+```
+
+Choose a custom output directory:
+
+```cmd
+python -m devtrack.summary_cli --date 2026-10-09 --output my_reports
+```
+
+Reports are saved as:
+
+`reports/YYYY-MM-DD.md`
+
+### Privacy
+
+DevTracker generates summaries locally using SQLite data.
+
+- No AI API is required.
+- No screenshots or keystrokes are collected.
+- Application usage is not treated as proof of completed work.
+- Generated reports are excluded from Git using `.gitignore`.
+
+### Testing
+
+Run all automated tests:
+
+```cmd
+python -m unittest discover -s tests -v
+```
+
+Phase 4 validation: 57 tests passed.
+
