@@ -131,3 +131,68 @@ DevTracker is being built incrementally, with features, fixes, tests, and milest
 ---
 
 **DevTracker — Automatic Work Journal for Developers**
+
+## Phase 3 — Developer Check-ins & Daily Journal
+
+Phase 3 adds developer-provided work context to DevTracker's automatic activity tracking.
+
+### Features
+
+- Manual developer check-ins
+- Project names and work descriptions
+- Work categories (Coding, Debugging, Testing, Research, Other)
+- Optional blockers
+- SQLite persistence for check-ins
+- Configurable periodic terminal reminders
+- Daily work journal combining application activity and developer check-ins
+- Date-based journal viewing
+
+### Usage
+
+Run the following commands from the project root.
+
+**1. Record a developer check-in**
+
+```cmd
+python -m devtrack.checkin_cli
+```
+
+**2. Start periodic reminders**
+
+```cmd
+python -m devtrack.reminder_cli --interval 60
+```
+
+Reminders run in the terminal while the process is active. Press Ctrl+C to stop.
+
+**3. View today's work journal**
+
+```cmd
+python -m devtrack.journal_cli
+```
+
+**4. View a specific day's journal**
+
+```cmd
+python -m devtrack.journal_cli --date 2026-10-09
+```
+
+**5. Run automated tests**
+
+```cmd
+python -m unittest discover -s tests -v
+```
+
+### Privacy
+
+DevTracker stores activity metadata and developer-entered check-ins locally in SQLite.
+
+Developer check-ins are entered manually. The reminder service does not automatically read source code, messages, or typed text.
+
+### Current Limitations
+
+- Reminders are terminal-based, not Windows desktop notifications.
+- The reminder process must be started manually.
+- Snooze prompts can block the reminder loop until answered.
+- Daily journals are currently displayed in the terminal.
+- Work descriptions are not automatically inferred from application activity.
