@@ -159,3 +159,40 @@ export async function getDailyReport(
 
   return response.json();
 }
+
+
+export interface TrackerSettings {
+  tracking_enabled: boolean;
+  poll_interval: number;
+  idle_threshold: number;
+  min_activity_duration: number;
+  collect_window_titles: boolean;
+}
+
+export async function getTrackerSettings(): Promise<TrackerSettings> {
+  const response = await fetch("/api/settings");
+
+  if (!response.ok) {
+    throw new Error("Failed to load tracker settings.");
+  }
+
+  return response.json();
+}
+
+export async function updateTrackerSettings(
+  settings: TrackerSettings
+): Promise<TrackerSettings> {
+  const response = await fetch("/api/settings", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(settings),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to save tracker settings.");
+  }
+
+  return response.json();
+}

@@ -290,5 +290,78 @@ class TestDevTrackerAPI(unittest.TestCase):
             "Invalid date. Use YYYY-MM-DD.",
         )
 
+    
+    # ==========================================
+    # SETTINGS API TESTS
+    # ==========================================
+
+    @patch("devtrack.api.main.JSONSettingsStore")
+    def test_get_tracker_settings(self, mock_store):
+        from devtrack.models.settings import TrackerSettings
+
+        expected = TrackerSettings(
+            tracking_enabled=True,
+            poll_interval=1,
+            idle_threshold=300,
+            min_activity_duration=2,
+            collect_window_titles=False,
+        )
+
+        mock_store.return_value.load.return_value = expected
+
+        response = self.client.get("/api/settings")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), expected.to_dict())
+        mock_store.return_value.load.assert_called_once()
+
+    @patch("devtrack.api.main.JSONSettingsStore")
+    def test_update_tracker_settings(self, mock_store):
+        payload = {
+            "tracking_enabled": False,
+            "poll_interval": 2,
+            "idle_threshold": 600,
+            "min_activity_duration": 5,
+            "collect_window_titles": False,
+        }
+
+        response = self.client.put(
+            "/api/settings",
+            json=payload,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), payload)
+
+        mock_store.return_value.save.assert_called_once()
+
+        saved_settings = (
+            mock_store.return_value.save.call_args.args[0]
+        )
+
+        self.assertEqual(
+            saved_settings.tracking_enabled,
+            False,
+        )
+        self.assertEqual(saved_settings.idle_threshold, 600)
+
+    @patch("devtrack.api.main.JSONSettingsStore")
+    def test_reject_invalid_tracker_settings(self, mock_store):
+        payload = {
+            "tracking_enabled": True,
+            "poll_interval": 0,
+            "idle_threshold": 300,
+            "min_activity_duration": 2,
+            "collect_window_titles": True,
+        }
+
+        response = self.client.put(
+            "/api/settings",
+            json=payload,
+        )
+
+        self.assertEqual(response.status_code, 422)
+        mock_store.return_value.save.assert_not_called()
+
 if __name__ == "__main__":
     unittest.main()

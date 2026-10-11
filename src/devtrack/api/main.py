@@ -11,6 +11,9 @@ from devtrack.journal.service import DailyJournalService
 from fastapi.responses import Response
 from devtrack.summary.formatter import MarkdownSummaryFormatter
 
+from devtrack.models.settings import TrackerSettings
+from devtrack.storage.settings_store import JSONSettingsStore
+
 
 class CheckInRequest(BaseModel):
     project_name: str = Field(min_length=1)
@@ -22,6 +25,14 @@ app = FastAPI(
     title="DevTracker API",
     version="0.5.0",
 )
+
+
+class TrackerSettingsRequest(BaseModel):
+    tracking_enabled: bool
+    poll_interval: int
+    idle_threshold: int
+    min_activity_duration: int
+    collect_window_titles: bool
 
 
 @app.get("/api/health")
@@ -148,4 +159,48 @@ def download_daily_report(day: str):
             "Content-Disposition": f'attachment; filename="{filename}"'
         },
     )
+
+
+@app.get("/api/settings")
+def get_tracker_settings():
+    store = JSONSettingsStore()
+
+    try:
+        settings = store.load()
+    except (ValueError, TypeError, OSError) as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to load tracker settings.",
+        ) from exc
+
+    return settings.to_dict()
+
+
+@app.put("/api/settings")
+def update_tracker_settings(payload: TrackerSettingsRequest):
+    try:
+        settings = TrackerSettings(
+            tracking_enabled=payload.tracking_enabled,
+            poll_interval=payload.poll_interval,
+            idle_threshold=payload.idle_threshold,
+            min_activity_duration=payload.min_activity_duration,
+            collect_window_titles=payload.collect_window_titles,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+
+    store = JSONSettingsStore()
+
+    try:
+        store.save(settings)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to save tracker settings.",
+        ) from exc
+
+    return settings.to_dict()
 

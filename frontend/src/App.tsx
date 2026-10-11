@@ -4,6 +4,7 @@ import Sidebar, { type Page } from "./components/Sidebar";
 import ActivityTimeline from "./pages/ActivityTimeline";
 import CheckIns from "./pages/CheckIns";
 import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
 
 import {
   getTodaySummary,
@@ -103,6 +104,8 @@ function App() {
           <CheckIns />
         ) : activePage === "reports" ? (
           <Reports />
+        ) : activePage === "settings" ? (
+          <Settings />
         ) : (
           <>
             <header className="mb-10">

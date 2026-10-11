@@ -6,7 +6,7 @@ from devtrack.storage.sqlite_store import SQLiteActivityStore
 from devtrack.collector.foreground import get_active_window
 from devtrack.models.activity import Activity
 from devtrack.collector.session import is_workstation_locked
-
+from devtrack.storage.settings_store import JSONSettingsStore
 
 def format_duration(seconds):
     seconds = int(seconds)
@@ -49,15 +49,26 @@ class ActivityTracker:
 
         self.last_poll_time = time.monotonic()
         self.last_poll_datetime = datetime.now()
-        self.max_poll_gap = 10
+        self.max_poll_gap = max(10, self.poll_interval * 3)
 
         self.store = store or SQLiteActivityStore()
+        self.settings_store = JSONSettingsStore()
+        self.collect_window_titles = True
 
+
+
+    
     def start_activity(self, window):
+        window_title = (
+            window["window_title"]
+            if self.collect_window_titles
+            else ""
+        )
+
         self.current_activity = Activity(
             process_name=window["process_name"],
             process_id=window["process_id"],
-            window_title=window["window_title"],
+            window_title=window_title,
             started_at=datetime.now(),
         )
 
@@ -95,6 +106,9 @@ class ActivityTracker:
 
         if ended_at is None:
             ended_at = datetime.now()
+
+        if ended_at < self.current_activity.started_at:
+            ended_at = self.current_activity.started_at
 
         self.current_activity.finish(
             ended_at
@@ -205,6 +219,39 @@ class ActivityTracker:
         self.is_idle = False
 
         print("[ACTIVE] User returned")
+
+
+    
+    
+    def apply_settings(self):
+        settings = self.settings_store.load()
+
+        # Close an active session before changing title privacy.
+        if (
+            self.current_activity is not None
+            and self.collect_window_titles
+            != settings.collect_window_titles
+        ):
+            self.finish_activity()
+            self.last_window = None
+
+        self.poll_interval = settings.poll_interval
+        self.max_poll_gap = max(10, self.poll_interval * 3)
+        self.idle_threshold = settings.idle_threshold
+        self.min_activity_duration = settings.min_activity_duration
+        self.collect_window_titles = settings.collect_window_titles
+
+        if not settings.tracking_enabled:
+            if self.current_activity:
+                self.finish_activity()
+
+            self.current_activity = None
+            self.last_window = None
+
+            return False
+
+        return True
+
     def run(self):
         print("DevTrack activity tracker started.")
         print("Press Ctrl+C to stop.\n")
@@ -212,6 +259,10 @@ class ActivityTracker:
         try:
             self.detect_tracking_gap()
             while True:
+
+                if not self.apply_settings():
+                    time.sleep(self.poll_interval)
+                    continue
 
                 idle_seconds = get_idle_seconds()
                 self.detect_tracking_gap()
@@ -238,7 +289,9 @@ class ActivityTracker:
 
                 window_identity = (
                     window["process_name"],
-                    window["window_title"],
+                    window["window_title"]
+                    if self.collect_window_titles
+                    else "",
                 )
 
                 if window_identity != self.last_window:

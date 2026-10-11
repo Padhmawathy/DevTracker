@@ -53,8 +53,7 @@ export default function Sidebar({
         {navigation.map((item) => {
           const Icon = item.icon;
           const isActive = activePage === item.id;
-          const available =
-            item.id === "overview" || item.id === "activity" || item.id === "checkins" || item.id === "reports";
+          const available = true;
 
           return (
             <button

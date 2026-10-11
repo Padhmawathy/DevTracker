@@ -32,3 +32,6 @@ frontend/dist/
 __pycache__/
 *.pyc
 
+data/settings.json
+
+
