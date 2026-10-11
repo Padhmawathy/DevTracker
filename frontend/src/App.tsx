@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Sidebar, { type Page } from "./components/Sidebar";
 import ActivityTimeline from "./pages/ActivityTimeline";
 import CheckIns from "./pages/CheckIns";
+import Reports from "./pages/Reports";
 
 import {
   getTodaySummary,
@@ -100,6 +101,8 @@ function App() {
           <ActivityTimeline />
         ) : activePage === "checkins" ? (
           <CheckIns />
+        ) : activePage === "reports" ? (
+          <Reports />
         ) : (
           <>
             <header className="mb-10">

@@ -8,6 +8,8 @@ from devtrack.storage.checkin_store import SQLiteCheckInStore
 from datetime import date
 from fastapi import HTTPException
 from devtrack.journal.service import DailyJournalService
+from fastapi.responses import Response
+from devtrack.summary.formatter import MarkdownSummaryFormatter
 
 
 class CheckInRequest(BaseModel):
@@ -106,3 +108,44 @@ def get_checkins(day: str):
         "checkins": checkins,
         "total_checkins": len(checkins),
     }
+
+
+@app.get("/api/reports/{day}")
+def get_daily_report(day: str):
+    try:
+        selected_day = date.fromisoformat(day)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid date. Use YYYY-MM-DD.",
+        )
+
+    summary = DailySummaryService().generate(selected_day)
+    return summary
+
+
+
+@app.get("/api/reports/{day}/download")
+def download_daily_report(day: str):
+    try:
+        selected_day = date.fromisoformat(day)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid date. Use YYYY-MM-DD.",
+        )
+
+    summary = DailySummaryService().generate(selected_day)
+
+    markdown = MarkdownSummaryFormatter().format(summary)
+
+    filename = f"{selected_day.isoformat()}.md"
+
+    return Response(
+        content=markdown,
+        media_type="text/markdown",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        },
+    )
+

@@ -54,7 +54,7 @@ export default function Sidebar({
           const Icon = item.icon;
           const isActive = activePage === item.id;
           const available =
-            item.id === "overview" || item.id === "activity" || item.id === "checkins";
+            item.id === "overview" || item.id === "activity" || item.id === "checkins" || item.id === "reports";
 
           return (
             <button

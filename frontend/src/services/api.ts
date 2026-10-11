@@ -141,3 +141,21 @@ export async function getDailyCheckIns(
 
   return response.json();
 }
+
+
+
+export async function getDailyReport(
+  day: string
+): Promise<DailySummary> {
+  const response = await fetch(
+    `/api/reports/${encodeURIComponent(day)}`
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to load daily report: ${response.status}`
+    );
+  }
+
+  return response.json();
+}

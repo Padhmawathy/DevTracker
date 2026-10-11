@@ -187,6 +187,108 @@ class TestDevTrackerAPI(unittest.TestCase):
             "DevTracker",
         )
 
+    
+    @patch("devtrack.api.main.DailySummaryService")
+    def test_get_daily_report(self, mock_service):
+        mock_service.return_value.generate.return_value = {
+            "date": "2026-10-09",
+            "total_tracked_seconds": 143.292884,
+            "application_usage": {
+                "Code.exe": 27.090587,
+            },
+            "projects": {
+                "DevTracker": {
+                    "work": ["Building the Check-ins API"],
+                    "categories": ["Coding"],
+                    "blockers": [],
+                }
+            },
+            "activity_count": 8,
+            "checkin_count": 3,
+        }
+
+        response = self.client.get(
+            "/api/reports/2026-10-09"
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(data["date"], "2026-10-09")
+        self.assertEqual(data["activity_count"], 8)
+        self.assertEqual(data["checkin_count"], 3)
+        self.assertIn("DevTracker", data["projects"])
+
+        from datetime import date
+        mock_service.return_value.generate.assert_called_once_with(
+            date(2026, 10, 9)
+        )
+
+    def test_get_daily_report_invalid_date(self):
+        response = self.client.get(
+            "/api/reports/invalid-date"
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["detail"],
+            "Invalid date. Use YYYY-MM-DD.",
+        )
+
+    
+    @patch("devtrack.api.main.DailySummaryService")
+    def test_download_daily_report(self, mock_service):
+        mock_service.return_value.generate.return_value = {
+            "date": "2026-10-09",
+            "total_tracked_seconds": 120,
+            "application_usage": {"Code.exe": 120},
+            "projects": {
+                "DevTracker": {
+                    "work": ["Building the Reports API"],
+                    "categories": ["Coding"],
+                    "blockers": [],
+                }
+            },
+            "activity_count": 1,
+            "checkin_count": 1,
+        }
+
+        response = self.client.get(
+            "/api/reports/2026-10-09/download"
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertIn(
+            "text/markdown",
+            response.headers["content-type"],
+        )
+
+        self.assertIn(
+            'filename="2026-10-09.md"',
+            response.headers["content-disposition"],
+        )
+
+        self.assertIn(
+            "# DevTracker — Daily Work Report",
+            response.text,
+        )
+
+        self.assertIn(
+            "Building the Reports API",
+            response.text,
+        )
+
+    def test_download_daily_report_invalid_date(self):
+        response = self.client.get(
+            "/api/reports/invalid-date/download"
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["detail"],
+            "Invalid date. Use YYYY-MM-DD.",
+        )
 
 if __name__ == "__main__":
     unittest.main()
