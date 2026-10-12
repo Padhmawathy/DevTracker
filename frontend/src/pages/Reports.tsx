@@ -78,27 +78,14 @@ export default function Reports() {
     : [];
 
   return (
-    <div className="space-y-8">
-      <header>
-        <p className="text-sm text-indigo-400">
-          Developer Workspace
-        </p>
-
-        <h1 className="mt-2 text-3xl font-bold">
-          Daily Reports
-        </h1>
-
-        <p className="mt-2 text-slate-400">
-          Review your development activity and daily progress.
-        </p>
-      </header>
+    <div className="space-y-6">
 
       
     <div className="flex flex-wrap items-center justify-between gap-4">
     <div className="flex items-center gap-4">
         <label
         htmlFor="report-date"
-        className="flex items-center gap-2 text-sm text-slate-300"
+        className="flex items-center gap-2 text-sm text-[#c3ccc5]"
         >
         <CalendarDays size={18} />
         Select date
@@ -109,7 +96,7 @@ export default function Reports() {
         type="date"
         value={selectedDate}
         onChange={(event) => setSelectedDate(event.target.value)}
-        className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-white"
+        className="rounded-lg border border-[#39413d] bg-[#202424] px-3 py-2 text-[#f0f2ee] [color-scheme:dark]"
         />
     </div>
 
@@ -120,10 +107,10 @@ export default function Reports() {
         onClick={(event) => {
         if (loading || !report) event.preventDefault();
         }}
-        className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium text-white ${
+        className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-[#17231b] ${
         loading || !report
-            ? "cursor-not-allowed bg-slate-700 opacity-50"
-            : "bg-indigo-600 hover:bg-indigo-500"
+            ? "cursor-not-allowed bg-[#333b38] opacity-50"
+            : "bg-[#a7c9b4] hover:bg-[#bdd9c7]"
         }`}
     >
         <Download size={18} />
@@ -132,20 +119,20 @@ export default function Reports() {
     </div>
 
       {loading && (
-        <p className="text-slate-400">
+        <p className="text-[#929c95]">
           Generating daily report...
         </p>
       )}
 
       {error && (
-        <p role="alert" className="text-red-400">
+        <p role="alert" className="text-[#f1aaa5]">
           {error}
         </p>
       )}
 
       {!loading && report && (
         <>
-          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <section className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-[#2b2f30] bg-[#2b2f30] xl:grid-cols-4">
             {[
               {
                 label: "Tracked Time",
@@ -173,9 +160,9 @@ export default function Reports() {
               return (
                 <div
                   key={item.label}
-                  className="rounded-xl border border-slate-800 bg-slate-900 p-5"
+                  className="bg-[#1c1f20] p-5"
                 >
-                  <div className="flex items-center gap-2 text-slate-400">
+                  <div className="flex items-center gap-2 text-[#929c95]">
                     <Icon size={18} />
                     <span className="text-sm">{item.label}</span>
                   </div>
@@ -188,13 +175,13 @@ export default function Reports() {
             })}
           </section>
 
-          <section className="rounded-xl border border-slate-800 bg-slate-900 p-6">
-            <h2 className="mb-5 text-lg font-semibold">
+          <section className="rounded-lg border border-[#2b2f30] bg-[#1c1f20] p-6">
+            <h2 className="mb-5 text-sm font-semibold">
               Application Usage
             </h2>
 
             {applications.length === 0 ? (
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-[#929c95]">
                 No application activity recorded.
               </p>
             ) : (
@@ -202,13 +189,13 @@ export default function Reports() {
                 {applications.map(([name, seconds]) => (
                   <div
                     key={name}
-                    className="flex items-center justify-between gap-4 border-b border-slate-800 pb-3"
+                    className="flex items-center justify-between gap-4 border-b border-[#2b2f30] pb-3"
                   >
-                    <span className="break-all text-sm text-slate-300">
+                    <span className="break-all text-sm text-[#c3ccc5]">
                       {name}
                     </span>
 
-                    <span className="shrink-0 text-sm font-medium text-indigo-400">
+                    <span className="shrink-0 text-sm font-medium text-[#aacbb6]">
                       {formatDuration(seconds)}
                     </span>
                   </div>
@@ -218,21 +205,21 @@ export default function Reports() {
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold">
+            <h2 className="text-sm font-semibold">
               Project Work
             </h2>
 
             {projects.length === 0 ? (
-              <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 text-slate-400">
+              <div className="rounded-lg border border-[#2b2f30] bg-[#1c1f20] p-6 text-[#929c95]">
                 No project check-ins recorded for this date.
               </div>
             ) : (
               projects.map(([name, details]) => (
                 <article
                   key={name}
-                  className="rounded-xl border border-slate-800 bg-slate-900 p-6"
+                  className="rounded-lg border border-[#2b2f30] bg-[#1c1f20] p-6"
                 >
-                  <h3 className="text-lg font-semibold">
+                  <h3 className="text-sm font-semibold">
                     {name}
                   </h3>
 
@@ -240,18 +227,18 @@ export default function Reports() {
                     {details.categories.map((category) => (
                       <span
                         key={category}
-                        className="rounded-md bg-indigo-500/10 px-3 py-1 text-xs text-indigo-300"
+                        className="rounded-md border border-[#3a4a40] bg-[#a7c9b4]/10 px-2 py-1 text-xs text-[#c4d9ca]"
                       >
                         {category}
                       </span>
                     ))}
                   </div>
 
-                  <h4 className="mt-5 text-sm font-medium text-slate-300">
+                  <h4 className="mt-5 text-sm font-medium text-[#c3ccc5]">
                     Work recorded
                   </h4>
 
-                  <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-slate-400">
+                  <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-[#929c95]">
                     {details.work.map((item, index) => (
                       <li key={index}>{item}</li>
                     ))}
@@ -259,11 +246,11 @@ export default function Reports() {
 
                   {details.blockers.length > 0 && (
                     <>
-                      <h4 className="mt-5 text-sm font-medium text-amber-400">
+                      <h4 className="mt-5 text-sm font-medium text-[#e6bc82]">
                         Blockers
                       </h4>
 
-                      <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-amber-300">
+                      <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-[#d8ba8c]">
                         {details.blockers.map((item, index) => (
                           <li key={index}>{item}</li>
                         ))}

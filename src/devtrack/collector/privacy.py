@@ -3,6 +3,7 @@ SENSITIVE_PROCESSES = {
     "teams.exe",
     "whatsapp.exe",
     "telegram.exe",
+    "whatsapp.root.exe",
 }
 
 BROWSER_PROCESSES = {

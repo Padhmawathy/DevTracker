@@ -1,5 +1,7 @@
 
 from fastapi import FastAPI
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
 
 from devtrack.summary.service import DailySummaryService
 from pydantic import BaseModel, Field
@@ -204,3 +206,23 @@ def update_tracker_settings(payload: TrackerSettingsRequest):
 
     return settings.to_dict()
 
+
+# ------------------------------------------
+# Serve DevTracker React production frontend
+# ------------------------------------------
+
+FRONTEND_DIST = (
+    Path(__file__).resolve().parents[3]
+    / "frontend"
+    / "dist"
+)
+
+if FRONTEND_DIST.is_dir():
+    app.mount(
+        "/",
+        StaticFiles(
+            directory=str(FRONTEND_DIST),
+            html=True,
+        ),
+        name="frontend",
+    )

@@ -103,33 +103,20 @@ export default function CheckIns() {
   }
 
   return (
-    <div className="space-y-8">
-      <header>
-        <p className="text-sm text-indigo-400">
-          Developer Workspace
-        </p>
-
-        <h1 className="mt-2 text-3xl font-bold">
-          Developer Check-ins
-        </h1>
-
-        <p className="mt-2 text-slate-400">
-          Record your work, track progress, and document blockers.
-        </p>
-      </header>
+    <div className="grid items-start gap-5 xl:grid-cols-2">
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-5 rounded-xl border border-slate-800 bg-slate-900 p-6"
+        className="space-y-5 rounded-lg border border-[#2b2f30] bg-[#1c1f20] p-6"
       >
-        <h2 className="text-lg font-semibold">
+        <h2 className="text-sm font-semibold">
           New Check-in
         </h2>
 
         <div>
           <label
             htmlFor="project"
-            className="mb-2 block text-sm text-slate-300"
+            className="mb-2 block text-sm text-[#c3ccc5]"
           >
             Project name
           </label>
@@ -142,14 +129,14 @@ export default function CheckIns() {
             required
             maxLength={150}
             placeholder="e.g. DevTracker"
-            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-indigo-500"
+            className="w-full rounded-lg border border-[#39413d] bg-[#17191a] px-3 py-2.5 text-[#f0f2ee] outline-none focus:border-[#a7c9b4]"
           />
         </div>
 
         <div>
           <label
             htmlFor="work"
-            className="mb-2 block text-sm text-slate-300"
+            className="mb-2 block text-sm text-[#c3ccc5]"
           >
             What are you working on?
           </label>
@@ -163,14 +150,14 @@ export default function CheckIns() {
             required
             rows={4}
             placeholder="Describe your work..."
-            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-indigo-500"
+            className="w-full rounded-lg border border-[#39413d] bg-[#17191a] px-3 py-2.5 text-[#f0f2ee] outline-none focus:border-[#a7c9b4]"
           />
         </div>
 
         <div>
           <label
             htmlFor="category"
-            className="mb-2 block text-sm text-slate-300"
+            className="mb-2 block text-sm text-[#c3ccc5]"
           >
             Category
           </label>
@@ -179,7 +166,7 @@ export default function CheckIns() {
             id="category"
             value={category}
             onChange={(event) => setCategory(event.target.value)}
-            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-white"
+            className="w-full rounded-lg border border-[#39413d] bg-[#17191a] px-3 py-2.5 text-[#f0f2ee]"
           >
             <option value="Coding">Coding</option>
             <option value="Debugging">Debugging</option>
@@ -192,7 +179,7 @@ export default function CheckIns() {
         <div>
           <label
             htmlFor="blocker"
-            className="mb-2 block text-sm text-slate-300"
+            className="mb-2 block text-sm text-[#c3ccc5]"
           >
             Blockers (optional)
           </label>
@@ -203,34 +190,34 @@ export default function CheckIns() {
             onChange={(event) => setBlocker(event.target.value)}
             rows={2}
             placeholder="Any issues slowing you down?"
-            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-indigo-500"
+            className="w-full rounded-lg border border-[#39413d] bg-[#17191a] px-3 py-2.5 text-[#f0f2ee] outline-none focus:border-[#a7c9b4]"
           />
         </div>
 
         <button
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-indigo-600 px-6 py-3 font-medium text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md bg-[#a7c9b4] px-5 py-2.5 text-sm font-semibold text-[#17231b] transition hover:bg-[#bdd9c7] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving ? "Saving..." : "Save Check-in"}
         </button>
 
         {success && (
-          <p role="status" className="text-sm text-green-400">
+          <p role="status" className="text-sm text-[#a7c9b4]">
             {success}
           </p>
         )}
 
         {error && (
-          <p role="alert" className="text-sm text-red-400">
+          <p role="alert" className="text-sm text-[#f1aaa5]">
             {error}
           </p>
         )}
       </form>
 
-      <section className="space-y-4">
+      <section className="space-y-4 rounded-lg border border-[#2b2f30] bg-[#1c1f20] p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h2 className="text-xl font-semibold">
+          <h2 className="text-sm font-semibold">
             Saved Check-ins
           </h2>
 
@@ -241,16 +228,16 @@ export default function CheckIns() {
             onChange={(event) =>
               setSelectedDate(event.target.value)
             }
-            className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-white"
+            className="rounded-lg border border-[#39413d] bg-[#202424] px-3 py-2 text-[#f0f2ee] [color-scheme:dark]"
           />
         </div>
 
         {loading ? (
-          <p className="text-slate-400">
+          <p className="text-[#929c95]">
             Loading check-ins...
           </p>
         ) : checkins.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 text-slate-400">
+          <div className="rounded-lg border border-[#2b2f30] bg-[#1c1f20] p-6 text-[#929c95]">
             No check-ins found for this date.
           </div>
         ) : (
@@ -258,29 +245,29 @@ export default function CheckIns() {
             {checkins.map((checkin) => (
               <article
                 key={checkin.id}
-                className="rounded-xl border border-slate-800 bg-slate-900 p-5"
+                className="rounded-md border border-[#35403a] bg-[#232827] p-4"
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h3 className="font-semibold">
                     {checkin.project_name}
                   </h3>
 
-                  <span className="rounded-md bg-indigo-500/10 px-3 py-1 text-xs text-indigo-300">
+                  <span className="rounded-md border border-[#3a4a40] bg-[#a7c9b4]/10 px-2 py-1 text-xs text-[#c4d9ca]">
                     {checkin.category}
                   </span>
                 </div>
 
-                <p className="mt-3 whitespace-pre-wrap text-sm text-slate-300">
+                <p className="mt-3 whitespace-pre-wrap text-sm text-[#c3ccc5]">
                   {checkin.work_description}
                 </p>
 
                 {checkin.blocker && (
-                  <p className="mt-3 whitespace-pre-wrap text-sm text-amber-400">
+                  <p className="mt-3 whitespace-pre-wrap text-sm text-[#e6bc82]">
                     Blocker: {checkin.blocker}
                   </p>
                 )}
 
-                <p className="mt-4 text-xs text-slate-500">
+                <p className="mt-4 text-xs text-[#738078]">
                   {checkin.created_at
                     .replace("T", " ")
                     .slice(0, 19)}

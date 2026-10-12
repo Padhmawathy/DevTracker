@@ -72,34 +72,23 @@ export default function Settings() {
   }
 
   if (loading) {
-    return <p className="text-slate-400">Loading settings...</p>;
+    return <p className="text-[#929c95]">Loading settings...</p>;
   }
 
   if (!settings) {
     return (
-      <p role="alert" className="text-red-400">
+      <p role="alert" className="text-[#f1aaa5]">
         {error || "Tracker settings are unavailable."}
       </p>
     );
   }
 
   return (
-    <div className="max-w-3xl space-y-8">
-      <header>
-        <p className="text-sm text-indigo-400">
-          Developer Workspace
-        </p>
-        <h1 className="mt-2 text-3xl font-bold">
-          Settings & Privacy
-        </h1>
-        <p className="mt-2 text-slate-400">
-          Configure how DevTracker records your application activity.
-        </p>
-      </header>
+    <div className="max-w-4xl space-y-6">
 
       <form onSubmit={handleSave} className="space-y-6">
-        <section className="space-y-5 rounded-xl border border-slate-800 bg-slate-900 p-6">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
+        <section className="space-y-5 rounded-lg border border-[#2b2f30] bg-[#1c1f20] p-6">
+          <h2 className="flex items-center gap-2 text-sm font-semibold">
             <SlidersHorizontal size={20} />
             Tracking Preferences
           </h2>
@@ -109,7 +98,7 @@ export default function Settings() {
               <span className="block font-medium">
                 Enable activity tracking
               </span>
-              <span className="block text-sm text-slate-400">
+              <span className="block text-sm text-[#929c95]">
                 Allow the running collector to record activity.
               </span>
             </span>
@@ -120,14 +109,14 @@ export default function Settings() {
               onChange={(event) =>
                 updateField("tracking_enabled", event.target.checked)
               }
-              className="h-5 w-5 accent-indigo-600"
+              className="h-4 w-4 accent-[#a7c9b4]"
             />
           </label>
 
           <div>
             <label
               htmlFor="poll-interval"
-              className="mb-2 block text-sm text-slate-300"
+              className="mb-2 block text-sm text-[#c3ccc5]"
             >
               Polling interval (1–60 seconds)
             </label>
@@ -142,14 +131,14 @@ export default function Settings() {
               onChange={(event) =>
                 updateField("poll_interval", Number(event.target.value))
               }
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3"
+              className="w-full max-w-[300px] rounded-md border border-[#39413d] bg-[#17191a] px-3 py-2.5 text-[#f0f2ee] focus:border-[#a7c9b4] outline-none"
             />
           </div>
 
           <div>
             <label
               htmlFor="idle-threshold"
-              className="mb-2 block text-sm text-slate-300"
+              className="mb-2 block text-sm text-[#c3ccc5]"
             >
               Idle threshold (30–3600 seconds)
             </label>
@@ -164,14 +153,14 @@ export default function Settings() {
               onChange={(event) =>
                 updateField("idle_threshold", Number(event.target.value))
               }
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3"
+              className="w-full max-w-[300px] rounded-md border border-[#39413d] bg-[#17191a] px-3 py-2.5 text-[#f0f2ee] focus:border-[#a7c9b4] outline-none"
             />
           </div>
 
           <div>
             <label
               htmlFor="min-duration"
-              className="mb-2 block text-sm text-slate-300"
+              className="mb-2 block text-sm text-[#c3ccc5]"
             >
               Minimum activity duration (1–60 seconds)
             </label>
@@ -189,13 +178,13 @@ export default function Settings() {
                   Number(event.target.value)
                 )
               }
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3"
+              className="w-full max-w-[300px] rounded-md border border-[#39413d] bg-[#17191a] px-3 py-2.5 text-[#f0f2ee] focus:border-[#a7c9b4] outline-none"
             />
           </div>
         </section>
 
-        <section className="space-y-5 rounded-xl border border-slate-800 bg-slate-900 p-6">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
+        <section className="space-y-5 rounded-lg border border-[#2b2f30] bg-[#1c1f20] p-6">
+          <h2 className="flex items-center gap-2 text-sm font-semibold">
             <Shield size={20} />
             Privacy
           </h2>
@@ -205,7 +194,7 @@ export default function Settings() {
               <span className="block font-medium">
                 Collect window titles
               </span>
-              <span className="block text-sm text-slate-400">
+              <span className="block text-sm text-[#929c95]">
                 When disabled, new activity records contain application
                 names without window titles.
               </span>
@@ -220,11 +209,11 @@ export default function Settings() {
                   event.target.checked
                 )
               }
-              className="h-5 w-5 accent-indigo-600"
+              className="h-4 w-4 accent-[#a7c9b4]"
             />
           </label>
 
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-[#738078]">
             Changing this option does not remove titles already stored
             in your database.
           </p>
@@ -233,20 +222,20 @@ export default function Settings() {
         <button
           type="submit"
           disabled={saving}
-          className="flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-md bg-[#a7c9b4] px-5 py-2.5 text-sm font-semibold text-[#17231b] hover:bg-[#bdd9c7] disabled:opacity-50"
         >
           <Save size={18} />
           {saving ? "Saving..." : "Save Settings"}
         </button>
 
         {success && (
-          <p role="status" className="text-sm text-green-400">
+          <p role="status" className="text-sm text-[#a7c9b4]">
             {success}
           </p>
         )}
 
         {error && (
-          <p role="alert" className="text-sm text-red-400">
+          <p role="alert" className="text-sm text-[#f1aaa5]">
             {error}
           </p>
         )}
