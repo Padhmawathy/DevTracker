@@ -30,11 +30,22 @@ app = FastAPI(
 
 
 class TrackerSettingsRequest(BaseModel):
+    # Existing tracking preferences
     tracking_enabled: bool
     poll_interval: int
     idle_threshold: int
     min_activity_duration: int
     collect_window_titles: bool
+
+    # Smart check-in reminder preferences
+    # Defaults preserve compatibility with older API clients.
+    reminders_enabled: bool = True
+    reminder_interval_minutes: int = 60
+    reminder_work_start: str = "09:00"
+    reminder_work_end: str = "18:00"
+    reminder_snooze_minutes: int = 15
+    reminders_respect_idle: bool = True
+
 
 
 @app.get("/api/health")
@@ -182,11 +193,7 @@ def get_tracker_settings():
 def update_tracker_settings(payload: TrackerSettingsRequest):
     try:
         settings = TrackerSettings(
-            tracking_enabled=payload.tracking_enabled,
-            poll_interval=payload.poll_interval,
-            idle_threshold=payload.idle_threshold,
-            min_activity_duration=payload.min_activity_duration,
-            collect_window_titles=payload.collect_window_titles,
+            **payload.model_dump()
         )
     except ValueError as exc:
         raise HTTPException(

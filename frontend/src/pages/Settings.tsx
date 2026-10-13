@@ -1,6 +1,6 @@
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Save, Shield, SlidersHorizontal } from "lucide-react";
+import { Bell, Save, Shield, SlidersHorizontal } from "lucide-react";
 import {
   getTrackerSettings,
   updateTrackerSettings,
@@ -218,6 +218,156 @@ export default function Settings() {
             in your database.
           </p>
         </section>
+
+                
+        <section className="overflow-hidden rounded-lg border border-[#2b2f30] bg-[#1c1f20]">
+          <div className="flex items-center gap-3 border-b border-[#2b2f30] px-5 py-4">
+            <Bell size={18} className="text-[#a7c9b4]" />
+            <div>
+              <h2 className="text-[14px] font-semibold text-[#f0f2ee]">
+                Smart Check-in Reminders
+              </h2>
+              <p className="mt-1 text-[11px] text-[#858e8b]">
+                Choose when DevTracker should remind you to document your work.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-6 p-5">
+            <label className="flex items-center justify-between gap-4">
+              <span>
+                <span className="block text-[13px] font-medium text-[#e1e5e0]">
+                  Enable reminders
+                </span>
+                <span className="mt-1 block text-[11px] text-[#858e8b]">
+                  Allow DevTracker to send check-in reminders.
+                </span>
+              </span>
+
+              <input
+                type="checkbox"
+                checked={settings.reminders_enabled}
+                onChange={(event) =>
+                  updateField("reminders_enabled", event.target.checked)
+                }
+                className="h-4 w-4 accent-[#a7c9b4]"
+              />
+            </label>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="reminder-interval"
+                  className="mb-2 block text-[12px] text-[#b8c0ba]"
+                >
+                  Reminder interval (minutes)
+                </label>
+                <input
+                  id="reminder-interval"
+                  type="number"
+                  min={15}
+                  max={240}
+                  step={1}
+                  required
+                  disabled={!settings.reminders_enabled}
+                  value={settings.reminder_interval_minutes}
+                  onChange={(event) =>
+                    updateField(
+                      "reminder_interval_minutes",
+                      Number(event.target.value)
+                    )
+                  }
+                  className="w-full rounded-md border border-[#373d3c] bg-[#17191a] px-3 py-2.5 text-[13px] text-[#e7eae6] outline-none focus:border-[#a7c9b4] disabled:opacity-50"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="reminder-snooze"
+                  className="mb-2 block text-[12px] text-[#b8c0ba]"
+                >
+                  Snooze duration (minutes)
+                </label>
+                <input
+                  id="reminder-snooze"
+                  type="number"
+                  min={5}
+                  max={60}
+                  step={1}
+                  required
+                  disabled={!settings.reminders_enabled}
+                  value={settings.reminder_snooze_minutes}
+                  onChange={(event) =>
+                    updateField(
+                      "reminder_snooze_minutes",
+                      Number(event.target.value)
+                    )
+                  }
+                  className="w-full rounded-md border border-[#373d3c] bg-[#17191a] px-3 py-2.5 text-[13px] text-[#e7eae6] outline-none focus:border-[#a7c9b4] disabled:opacity-50"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="reminder-work-start"
+                  className="mb-2 block text-[12px] text-[#b8c0ba]"
+                >
+                  Working hours start
+                </label>
+                <input
+                  id="reminder-work-start"
+                  type="time"
+                  required
+                  value={settings.reminder_work_start}
+                  onChange={(event) =>
+                    updateField("reminder_work_start", event.target.value)
+                  }
+                  className="w-full rounded-md border border-[#373d3c] bg-[#17191a] px-3 py-2.5 text-[13px] text-[#e7eae6] outline-none focus:border-[#a7c9b4]"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="reminder-work-end"
+                  className="mb-2 block text-[12px] text-[#b8c0ba]"
+                >
+                  Working hours end
+                </label>
+                <input
+                  id="reminder-work-end"
+                  type="time"
+                  required
+                  value={settings.reminder_work_end}
+                  onChange={(event) =>
+                    updateField("reminder_work_end", event.target.value)
+                  }
+                  className="w-full rounded-md border border-[#373d3c] bg-[#17191a] px-3 py-2.5 text-[13px] text-[#e7eae6] outline-none focus:border-[#a7c9b4]"
+                />
+              </div>
+            </div>
+
+            <label className="flex items-center justify-between gap-4 border-t border-[#2b2f30] pt-5">
+              <span>
+                <span className="block text-[13px] font-medium text-[#e1e5e0]">
+                  Respect idle time
+                </span>
+                <span className="mt-1 block text-[11px] text-[#858e8b]">
+                  Avoid sending reminders while the computer is idle.
+                </span>
+              </span>
+
+              <input
+                type="checkbox"
+                checked={settings.reminders_respect_idle}
+                onChange={(event) =>
+                  updateField("reminders_respect_idle", event.target.checked)
+                }
+                className="h-4 w-4 accent-[#a7c9b4]"
+              />
+            </label>
+          </div>
+        </section>
+
 
         <button
           type="submit"

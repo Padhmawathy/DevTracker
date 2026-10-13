@@ -161,13 +161,24 @@ export async function getDailyReport(
 }
 
 
+
 export interface TrackerSettings {
+  // Activity tracking
   tracking_enabled: boolean;
   poll_interval: number;
   idle_threshold: number;
   min_activity_duration: number;
   collect_window_titles: boolean;
+
+  // Smart check-in reminders
+  reminders_enabled: boolean;
+  reminder_interval_minutes: number;
+  reminder_work_start: string;
+  reminder_work_end: string;
+  reminder_snooze_minutes: number;
+  reminders_respect_idle: boolean;
 }
+
 
 export async function getTrackerSettings(): Promise<TrackerSettings> {
   const response = await fetch("/api/settings");

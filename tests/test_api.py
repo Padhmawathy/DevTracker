@@ -6,6 +6,8 @@ from fastapi.testclient import TestClient
 
 from devtrack.api.main import app
 
+from devtrack.models.settings import TrackerSettings
+
 
 class TestDevTrackerAPI(unittest.TestCase):
 
@@ -331,7 +333,10 @@ class TestDevTrackerAPI(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), payload)
+        expected = TrackerSettings(**payload).to_dict()
+
+        self.assertEqual(response.json(), expected)
+
 
         mock_store.return_value.save.assert_called_once()
 

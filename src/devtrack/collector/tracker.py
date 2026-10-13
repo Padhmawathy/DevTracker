@@ -7,6 +7,8 @@ from devtrack.collector.foreground import get_active_window
 from devtrack.models.activity import Activity
 from devtrack.collector.session import is_workstation_locked
 from devtrack.storage.settings_store import JSONSettingsStore
+from devtrack.reminders.engine import ReminderEngine
+from devtrack.reminders.notifier import WindowsNotifier
 
 def format_duration(seconds):
     seconds = int(seconds)
@@ -54,6 +56,10 @@ class ActivityTracker:
         self.store = store or SQLiteActivityStore()
         self.settings_store = JSONSettingsStore()
         self.collect_window_titles = True
+
+        self.reminder_engine = ReminderEngine()
+        self.notifier = WindowsNotifier()
+        self.current_settings = None
 
 
 
@@ -225,6 +231,7 @@ class ActivityTracker:
     
     def apply_settings(self):
         settings = self.settings_store.load()
+        self.current_settings = settings
 
         # Close an active session before changing title privacy.
         if (
@@ -252,29 +259,61 @@ class ActivityTracker:
 
         return True
 
+    
+
+    def check_reminder(self, active: bool):
+        """Update the reminder clock and send a notification when due."""
+        if self.current_settings is None:
+            return
+
+        due = self.reminder_engine.tick(
+            settings=self.current_settings,
+            active=active,
+        )
+
+        if due:
+            sent = self.notifier.send_checkin_reminder()
+
+            if sent:
+                print(
+                    "\n[CHECK-IN REMINDER] "
+                    "Windows notification sent.\n"
+                )
+            else:
+                print(
+                    "\n[CHECK-IN REMINDER] "
+                    "Notification could not be displayed.\n"
+                )
+
+    
     def run(self):
         print("DevTrack activity tracker started.")
         print("Press Ctrl+C to stop.\n")
 
         try:
             self.detect_tracking_gap()
-            while True:
 
+            while True:
                 if not self.apply_settings():
+                    self.check_reminder(active=False)
                     time.sleep(self.poll_interval)
                     continue
 
                 idle_seconds = get_idle_seconds()
+
                 self.detect_tracking_gap()
                 self.check_lock_state()
+
                 if self.is_locked:
+                    self.check_reminder(active=False)
                     time.sleep(self.poll_interval)
                     continue
-                if idle_seconds >= self.idle_threshold:
 
+                if idle_seconds >= self.idle_threshold:
                     if not self.is_idle:
                         self.enter_idle_state()
 
+                    self.check_reminder(active=False)
                     time.sleep(self.poll_interval)
                     continue
 
@@ -284,6 +323,7 @@ class ActivityTracker:
                 window = get_active_window()
 
                 if not window:
+                    self.check_reminder(active=False)
                     time.sleep(self.poll_interval)
                     continue
 
@@ -295,21 +335,19 @@ class ActivityTracker:
                 )
 
                 if window_identity != self.last_window:
-
                     if self.current_activity:
                         self.finish_activity()
 
                     self.start_activity(window)
-
                     self.last_window = window_identity
+
+                # Count eligible working time on each polling cycle.
+                self.check_reminder(active=True)
 
                 time.sleep(self.poll_interval)
 
         except KeyboardInterrupt:
-
             if self.current_activity:
                 self.finish_activity()
 
-            print(
-                "\nDevTrack activity tracker stopped."
-            )
+            print("\nDevTrack activity tracker stopped.")
