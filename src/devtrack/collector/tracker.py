@@ -9,6 +9,9 @@ from devtrack.collector.session import is_workstation_locked
 from devtrack.storage.settings_store import JSONSettingsStore
 from devtrack.reminders.engine import ReminderEngine
 from devtrack.reminders.notifier import WindowsNotifier
+from devtrack.reminders.state import ReminderState
+from devtrack.reminders.state_store import JSONReminderStateStore
+from devtrack.reminders.action_queue import ReminderActionQueue
 
 def format_duration(seconds):
     seconds = int(seconds)
@@ -31,7 +34,8 @@ class ActivityTracker:
         poll_interval=1,
         idle_threshold=300,
         min_activity_duration=2,
-        store=None
+        store=None,
+        reminder_state_store=None,
     ):
         self.poll_interval = poll_interval
         self.idle_threshold = idle_threshold
@@ -60,6 +64,19 @@ class ActivityTracker:
         self.reminder_engine = ReminderEngine()
         self.notifier = WindowsNotifier()
         self.current_settings = None
+
+        self.reminder_action_queue = None
+
+        self.reminder_state_store = (
+            reminder_state_store
+            if reminder_state_store is not None
+            else JSONReminderStateStore()
+        )
+        try:
+            self.reminder_state = self.reminder_state_store.load()
+        except (OSError, ValueError, TypeError) as exc:
+            print(f"[REMINDER STATE] Unable to load saved state: {exc}")
+            self.reminder_state = ReminderState()
 
 
 
@@ -261,29 +278,147 @@ class ActivityTracker:
 
     
 
+   
+
+    def snooze_reminder(self):
+        """Postpone the current pending reminder."""
+        if self.current_settings is None:
+            return False
+
+        if not self.reminder_state.pending:
+            return False
+
+        self.reminder_state.snooze(
+            minutes=self.current_settings.reminder_snooze_minutes,
+            now=datetime.now(),
+        )
+        self.reminder_state_store.save(self.reminder_state)
+        print("[REMINDER] Snoozed")
+        return True
+
+    def skip_reminder(self):
+        """Dismiss the pending reminder and restart work timing."""
+        if not self.reminder_state.pending:
+            return False
+
+        self.reminder_state.skip()
+        self.reminder_state_store.save(self.reminder_state)
+        # Begin a fresh active-work interval.
+        self.reminder_engine.active_seconds = 0.0
+        self.reminder_engine.last_monotonic = None
+        self.reminder_engine.last_eligible = False
+
+        print("[REMINDER] Skipped")
+        return True
+
     def check_reminder(self, active: bool):
-        """Update the reminder clock and send a notification when due."""
+        """Handle new reminders and previously snoozed reminders."""
         if self.current_settings is None:
             return
 
+        settings = self.current_settings
+
+        if self.reminder_state.pending:
+            # Keep the engine clock updated, but do not
+            # accumulate new work while a reminder is pending.
+            self.reminder_engine.tick(
+                settings=settings,
+                active=False,
+            )
+
+            # Snoozed reminders only reappear during eligible
+            # work periods, not while idle or outside work hours.
+            eligible = (
+                active
+                and settings.tracking_enabled
+                and settings.reminders_enabled
+                and self.reminder_engine.within_work_hours(
+                    datetime.now(),
+                    settings,
+                )
+            )
+
+            if (
+                eligible
+                and self.reminder_state.is_snooze_due(datetime.now())
+            ):
+                sent = self.notifier.send_checkin_reminder(
+                    self.reminder_state.reminder_id
+                )
+
+                if sent:
+                    self.reminder_state.acknowledge_snooze()
+                    self.reminder_state_store.save(self.reminder_state)
+                    print("[REMINDER] Snoozed reminder delivered")
+                else:
+                    print("[REMINDER] Snoozed notification failed")
+
+            return
+
         due = self.reminder_engine.tick(
-            settings=self.current_settings,
+            settings=settings,
             active=active,
         )
 
-        if due:
-            sent = self.notifier.send_checkin_reminder()
+        if not due:
+            return
 
-            if sent:
-                print(
-                    "\n[CHECK-IN REMINDER] "
-                    "Windows notification sent.\n"
-                )
+        if not self.reminder_state.mark_due():
+            return
+
+        
+        sent = self.notifier.send_checkin_reminder(
+            self.reminder_state.reminder_id
+        )
+
+        if sent:
+            print("[CHECK-IN REMINDER] Notification sent")
+        else:
+            # Don't leave an undelivered reminder
+            # permanently stuck in the pending state.
+            self.reminder_state.skip()
+            self.reminder_state_store.save(self.reminder_state)
+
+            # Reset the timing state so a failed delivery
+            # cannot cause an immediate notification loop.
+            self.reminder_engine.active_seconds = 0.0
+            self.reminder_engine.last_monotonic = None
+            self.reminder_engine.last_eligible = False
+
+            print("[CHECK-IN REMINDER] Notification failed")
+
+
+    
+    
+    def process_reminder_actions(self):
+        """Process actions belonging to the current pending reminder."""
+        if self.reminder_action_queue is None:
+            return
+
+        reminder_id = self.reminder_state.reminder_id
+
+        # No active reminder means no valid notification action.
+        if not self.reminder_state.pending or reminder_id is None:
+            return
+
+        action = self.reminder_action_queue.consume_for_reminder(
+            reminder_id
+        )
+
+        if action is None:
+            return
+
+        if action == "snooze":
+            if self.snooze_reminder():
+                print("[REMINDER ACTION] Snooze processed")
             else:
-                print(
-                    "\n[CHECK-IN REMINDER] "
-                    "Notification could not be displayed.\n"
-                )
+                print("[REMINDER ACTION] Snooze ignored")
+
+        elif action == "skip":
+            if self.skip_reminder():
+                print("[REMINDER ACTION] Skip processed")
+            else:
+                print("[REMINDER ACTION] Skip ignored")
 
     
     def run(self):
@@ -291,6 +426,7 @@ class ActivityTracker:
         print("Press Ctrl+C to stop.\n")
 
         try:
+            self.reminder_action_queue = ReminderActionQueue()
             self.detect_tracking_gap()
 
             while True:

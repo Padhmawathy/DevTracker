@@ -406,8 +406,30 @@ function Overview({
   );
 }
 
+function getPageFromUrl(): Page {
+  const params = new URLSearchParams(window.location.search);
+  const requestedPage = params.get("page");
+
+  const validPages: Page[] = [
+    "overview",
+    "activity",
+    "checkins",
+    "reports",
+    "settings",
+  ];
+
+  if (
+    requestedPage &&
+    validPages.includes(requestedPage as Page)
+  ) {
+    return requestedPage as Page;
+  }
+
+  return "overview";
+}
+
 export default function App() {
-  const [activePage, setActivePage] = useState<Page>("overview");
+  const [activePage, setActivePage] = useState<Page>(getPageFromUrl());
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const currentPage = PAGE_INFO[activePage];
@@ -415,7 +437,13 @@ export default function App() {
   function navigate(page: Page) {
     setActivePage(page);
     setMobileOpen(false);
+
+    const url = new URL(window.location.href);
+    url.searchParams.set("page", page);
+
+    window.history.pushState({}, "", url);
   }
+
 
   function renderPage() {
     switch (activePage) {
@@ -433,6 +461,20 @@ export default function App() {
         return <Overview onNavigate={navigate} />;
     }
   }
+
+  
+useEffect(() => {
+  function handlePopState() {
+    setActivePage(getPageFromUrl());
+    setMobileOpen(false);
+  }
+
+  window.addEventListener("popstate", handlePopState);
+
+  return () => {
+    window.removeEventListener("popstate", handlePopState);
+  };
+}, []);
 
   return (
     <div className="flex min-h-screen bg-[#17191a] font-sans text-[#e7eae6] lg:h-screen lg:overflow-hidden">

@@ -3,6 +3,9 @@ from fastapi import FastAPI
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 
+from devtrack.models.profile import DeveloperProfile
+from devtrack.storage.profile_store import JSONDeveloperProfileStore
+
 from devtrack.summary.service import DailySummaryService
 from pydantic import BaseModel, Field
 from devtrack.models.checkin import DeveloperCheckIn
@@ -46,6 +49,16 @@ class TrackerSettingsRequest(BaseModel):
     reminder_snooze_minutes: int = 15
     reminders_respect_idle: bool = True
 
+
+class DeveloperProfileRequest(BaseModel):
+    display_name: str = ""
+    role: str = "fullstack"
+    primary_language: str = ""
+    primary_editor: str = ""
+    daily_focus_goal_minutes: int = Field(
+        default=240,
+        strict=True,
+    )
 
 
 @app.get("/api/health")
@@ -213,6 +226,45 @@ def update_tracker_settings(payload: TrackerSettingsRequest):
 
     return settings.to_dict()
 
+
+@app.get("/api/profile")
+def get_developer_profile():
+    store = JSONDeveloperProfileStore()
+
+    try:
+        profile = store.load()
+    except (ValueError, TypeError, OSError) as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to load developer profile.",
+        ) from exc
+
+    return profile.to_dict()
+
+
+@app.put("/api/profile")
+def update_developer_profile(payload: DeveloperProfileRequest):
+    try:
+        profile = DeveloperProfile(
+            **payload.model_dump()
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+
+    store = JSONDeveloperProfileStore()
+
+    try:
+        store.save(profile)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to save developer profile.",
+        ) from exc
+
+    return profile.to_dict()
 
 # ------------------------------------------
 # Serve DevTracker React production frontend

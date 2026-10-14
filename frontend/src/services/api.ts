@@ -207,3 +207,41 @@ export async function updateTrackerSettings(
 
   return response.json();
 }
+
+
+
+export interface DeveloperProfile {
+  display_name: string;
+  role: string;
+  primary_language: string;
+  primary_editor: string;
+  daily_focus_goal_minutes: number;
+}
+
+export async function getDeveloperProfile(): Promise<DeveloperProfile> {
+  const response = await fetch("/api/profile");
+
+  if (!response.ok) {
+    throw new Error("Failed to load developer profile");
+  }
+
+  return response.json();
+}
+
+export async function updateDeveloperProfile(
+  profile: DeveloperProfile
+): Promise<DeveloperProfile> {
+  const response = await fetch("/api/profile", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(profile),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to save developer profile");
+  }
+
+  return response.json();
+}
