@@ -245,3 +245,51 @@ export async function updateDeveloperProfile(
 
   return response.json();
 }
+
+
+export type AppCategory =
+  | "development"
+  | "research"
+  | "testing"
+  | "design"
+  | "communication"
+  | "meetings"
+  | "personal"
+  | "other";
+
+export interface AppCategoryRule {
+  app_name: string;
+  category: AppCategory;
+}
+
+export interface AppCategoriesResponse {
+  rules: AppCategoryRule[];
+}
+
+export async function getAppCategories(): Promise<AppCategoriesResponse> {
+  const response = await fetch("/api/app-categories");
+
+  if (!response.ok) {
+    throw new Error("Failed to load application categories");
+  }
+
+  return (await response.json()) as AppCategoriesResponse;
+}
+
+export async function updateAppCategories(
+  rules: AppCategoryRule[]
+): Promise<AppCategoriesResponse> {
+  const response = await fetch("/api/app-categories", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ rules }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to save application categories");
+  }
+
+  return (await response.json()) as AppCategoriesResponse;
+}

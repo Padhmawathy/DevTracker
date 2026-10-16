@@ -19,6 +19,9 @@ from devtrack.summary.formatter import MarkdownSummaryFormatter
 from devtrack.models.settings import TrackerSettings
 from devtrack.storage.settings_store import JSONSettingsStore
 
+from devtrack.models.app_category import AppCategoryRule
+from devtrack.storage.app_category_store import JSONAppCategoryStore
+
 
 class CheckInRequest(BaseModel):
     project_name: str = Field(min_length=1)
@@ -59,6 +62,15 @@ class DeveloperProfileRequest(BaseModel):
         default=240,
         strict=True,
     )
+
+
+class AppCategoryRuleRequest(BaseModel):
+    app_name: str
+    category: str
+
+
+class AppCategoriesRequest(BaseModel):
+    rules: list[AppCategoryRuleRequest]
 
 
 @app.get("/api/health")
@@ -265,6 +277,67 @@ def update_developer_profile(payload: DeveloperProfileRequest):
         ) from exc
 
     return profile.to_dict()
+
+
+
+@app.get("/api/app-categories")
+def get_app_categories():
+    store = JSONAppCategoryStore()
+
+    try:
+        rules = store.load()
+    except (ValueError, TypeError, OSError) as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to load application categories.",
+        ) from exc
+
+    return {
+        "rules": [
+            {
+                "app_name": rule.app_name,
+                "category": rule.category,
+            }
+            for rule in rules
+        ]
+    }
+
+
+@app.put("/api/app-categories")
+def update_app_categories(payload: AppCategoriesRequest):
+    try:
+        rules = [
+            AppCategoryRule(
+                app_name=item.app_name,
+                category=item.category,
+            )
+            for item in payload.rules
+        ]
+
+        store = JSONAppCategoryStore()
+        store.save(rules)
+
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to save application categories.",
+        ) from exc
+
+    return {
+        "rules": [
+            {
+                "app_name": rule.app_name,
+                "category": rule.category,
+            }
+            for rule in rules
+        ]
+    }
 
 # ------------------------------------------
 # Serve DevTracker React production frontend
