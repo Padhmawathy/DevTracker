@@ -1,4 +1,20 @@
 
+const API_BASE_URL =
+  window.location.hostname === "tauri.localhost"
+    ? "http://127.0.0.1:8000"
+    : "";
+
+export function apiFetch(
+  input: string,
+  init?: RequestInit
+): Promise<Response> {
+  const url = input.startsWith("/api/")
+    ? `${API_BASE_URL}${input}`
+    : input;
+
+  return window.fetch(url, init);
+}
+
 // ==========================================
 // DEVTRACKER API SERVICE
 // ==========================================
@@ -67,7 +83,7 @@ export interface DailyCheckInsResponse {
 // ==========================================
 
 export async function getTodaySummary(): Promise<DailySummary> {
-  const response = await fetch("/api/summary/today");
+  const response = await apiFetch("/api/summary/today");
 
   if (!response.ok) {
     throw new Error(
@@ -85,7 +101,7 @@ export async function getTodaySummary(): Promise<DailySummary> {
 export async function getDailyActivity(
   day: string
 ): Promise<DailyActivityResponse> {
-  const response = await fetch(
+  const response = await apiFetch(
     `/api/activity/${encodeURIComponent(day)}`
   );
 
@@ -105,7 +121,7 @@ export async function getDailyActivity(
 export async function createCheckIn(
   payload: CreateCheckInRequest
 ): Promise<DeveloperCheckIn> {
-  const response = await fetch("/api/checkins", {
+  const response = await apiFetch("/api/checkins", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -129,7 +145,7 @@ export async function createCheckIn(
 export async function getDailyCheckIns(
   day: string
 ): Promise<DailyCheckInsResponse> {
-  const response = await fetch(
+  const response = await apiFetch(
     `/api/checkins/${encodeURIComponent(day)}`
   );
 
@@ -147,7 +163,7 @@ export async function getDailyCheckIns(
 export async function getDailyReport(
   day: string
 ): Promise<DailySummary> {
-  const response = await fetch(
+  const response = await apiFetch(
     `/api/reports/${encodeURIComponent(day)}`
   );
 
@@ -165,6 +181,7 @@ export async function getDailyReport(
 export interface TrackerSettings {
   // Activity tracking
   tracking_enabled: boolean;
+  tracking_consent_granted: boolean;
   poll_interval: number;
   idle_threshold: number;
   min_activity_duration: number;
@@ -181,7 +198,7 @@ export interface TrackerSettings {
 
 
 export async function getTrackerSettings(): Promise<TrackerSettings> {
-  const response = await fetch("/api/settings");
+  const response = await apiFetch("/api/settings");
 
   if (!response.ok) {
     throw new Error("Failed to load tracker settings.");
@@ -193,7 +210,7 @@ export async function getTrackerSettings(): Promise<TrackerSettings> {
 export async function updateTrackerSettings(
   settings: TrackerSettings
 ): Promise<TrackerSettings> {
-  const response = await fetch("/api/settings", {
+  const response = await apiFetch("/api/settings", {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -219,7 +236,7 @@ export interface DeveloperProfile {
 }
 
 export async function getDeveloperProfile(): Promise<DeveloperProfile> {
-  const response = await fetch("/api/profile");
+  const response = await apiFetch("/api/profile");
 
   if (!response.ok) {
     throw new Error("Failed to load developer profile");
@@ -231,7 +248,7 @@ export async function getDeveloperProfile(): Promise<DeveloperProfile> {
 export async function updateDeveloperProfile(
   profile: DeveloperProfile
 ): Promise<DeveloperProfile> {
-  const response = await fetch("/api/profile", {
+  const response = await apiFetch("/api/profile", {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -267,7 +284,7 @@ export interface AppCategoriesResponse {
 }
 
 export async function getAppCategories(): Promise<AppCategoriesResponse> {
-  const response = await fetch("/api/app-categories");
+  const response = await apiFetch("/api/app-categories");
 
   if (!response.ok) {
     throw new Error("Failed to load application categories");
@@ -279,7 +296,7 @@ export async function getAppCategories(): Promise<AppCategoriesResponse> {
 export async function updateAppCategories(
   rules: AppCategoryRule[]
 ): Promise<AppCategoriesResponse> {
-  const response = await fetch("/api/app-categories", {
+  const response = await apiFetch("/api/app-categories", {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",

@@ -2,11 +2,22 @@
 """Unified backend entry point for the DevTrack desktop app."""
 
 import threading
-
+import sys
 import uvicorn
 
 from devtrack.api.main import app
 from devtrack.collector.tracker import ActivityTracker
+
+def listen_for_shutdown(server, input_stream):
+    """Accept shutdown requests from the desktop application."""
+    for line in input_stream:
+        if line.strip() == "shutdown":
+            server.should_exit = True
+            return
+
+    # If the desktop process closes its input pipe,
+    # request shutdown rather than leaving tracking running.
+    server.should_exit = True
 
 
 def run_backend(
@@ -14,6 +25,7 @@ def run_backend(
     port=8000,
     tracker=None,
     server=None,
+    managed = False,
 ):
     """Run the API and activity collector together."""
 
@@ -36,7 +48,14 @@ def run_backend(
     )
 
     collector_thread.start()
-
+    if managed:
+        shutdown_thread = threading.Thread(
+            target=listen_for_shutdown,
+            args=(server, sys.stdin),
+            name="DevTrackShutdownListener",
+            daemon=True,
+        )
+        shutdown_thread.start()
     try:
         server.run()
 
@@ -52,9 +71,9 @@ def run_backend(
                 "DevTrack collector did not stop cleanly"
             )
 
-
 def main():
-    run_backend()
+    managed = len(sys.argv) == 2 and sys.argv[1] == "--managed"
+    run_backend(managed=managed)
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@ import sys
 from fastapi import FastAPI
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
-
+from fastapi.middleware.cors import CORSMiddleware
 from devtrack.models.profile import DeveloperProfile
 from devtrack.storage.profile_store import JSONDeveloperProfileStore
 
@@ -23,28 +23,36 @@ from devtrack.models.app_category import AppCategoryRule
 from devtrack.storage.app_category_store import JSONAppCategoryStore
 
 
+app = FastAPI(
+    title="DevTracker API",
+    version="0.5.0",
+)
+
+# Allow the packaged DevTrack Windows frontend.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://tauri.localhost"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT"],
+    allow_headers=["Content-Type"],
+)
+
+
 class CheckInRequest(BaseModel):
     project_name: str = Field(min_length=1)
     work_description: str = Field(min_length=1)
     category: str = "Other"
     blocker: str | None = None
 
-app = FastAPI(
-    title="DevTracker API",
-    version="0.5.0",
-)
-
 
 class TrackerSettingsRequest(BaseModel):
-    # Existing tracking preferences
     tracking_enabled: bool
+    tracking_consent_granted: bool = False
     poll_interval: int
     idle_threshold: int
     min_activity_duration: int
     collect_window_titles: bool
 
-    # Smart check-in reminder preferences
-    # Defaults preserve compatibility with older API clients.
     reminders_enabled: bool = True
     reminder_interval_minutes: int = 60
     reminder_work_start: str = "09:00"
