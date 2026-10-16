@@ -1,4 +1,4 @@
-
+import sys
 from fastapi import FastAPI
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
@@ -343,11 +343,24 @@ def update_app_categories(payload: AppCategoriesRequest):
 # Serve DevTracker React production frontend
 # ------------------------------------------
 
-FRONTEND_DIST = (
-    Path(__file__).resolve().parents[3]
-    / "frontend"
-    / "dist"
-)
+def get_frontend_dist() -> Path:
+    """Locate React assets in development or PyInstaller."""
+
+    if getattr(sys, "frozen", False):
+        return (
+            Path(__file__).resolve().parents[3]
+            if not hasattr(sys, "_MEIPASS")
+            else Path(sys._MEIPASS)
+        ) / "frontend" / "dist"
+
+    return (
+        Path(__file__).resolve().parents[3]
+        / "frontend"
+        / "dist"
+    )
+
+
+FRONTEND_DIST = get_frontend_dist()
 
 if FRONTEND_DIST.is_dir():
     app.mount(

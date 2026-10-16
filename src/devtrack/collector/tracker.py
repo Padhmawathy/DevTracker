@@ -1,6 +1,7 @@
 import time
+import time
 from datetime import datetime
-
+from threading import Event
 from devtrack.collector.idle import get_idle_seconds
 from devtrack.storage.sqlite_store import SQLiteActivityStore
 from devtrack.collector.foreground import get_active_window
@@ -45,7 +46,7 @@ class ActivityTracker:
    
         self.current_activity = None
         self.last_window = None
-
+        self.stop_event = Event()
         self.is_idle = False
         self.is_locked = False
 
@@ -420,6 +421,9 @@ class ActivityTracker:
             else:
                 print("[REMINDER ACTION] Skip ignored")
 
+    def stop(self):
+        """Request a graceful tracker shutdown."""
+        self.stop_event.set()
     
     def run(self):
         print("DevTrack activity tracker started.")
@@ -429,7 +433,7 @@ class ActivityTracker:
             self.reminder_action_queue = ReminderActionQueue()
             self.detect_tracking_gap()
 
-            while True:
+            while not self.stop_event.is_set():
                 if not self.apply_settings():
                     self.check_reminder(active=False)
                     time.sleep(self.poll_interval)
@@ -480,9 +484,12 @@ class ActivityTracker:
                 # Count eligible working time on each polling cycle.
                 self.check_reminder(active=True)
 
-                time.sleep(self.poll_interval)
+                self.stop_event.wait(self.poll_interval)
 
         except KeyboardInterrupt:
+            self.stop_event.set()
+
+        finally:
             if self.current_activity:
                 self.finish_activity()
 
