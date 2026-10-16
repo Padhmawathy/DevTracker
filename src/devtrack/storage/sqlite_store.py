@@ -1,11 +1,16 @@
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
-
+from devtrack.config.paths import get_data_path
+from contextlib import closing, contextmanager
 
 class SQLiteActivityStore:
-    def __init__(self, db_path="data/devtrack.db"):
-        self.db_path = Path(db_path)
+    def __init__(self, db_path=None):
+        self.db_path = (
+            Path(db_path)
+            if db_path is not None
+            else get_data_path("devtrack.db")
+        )
 
         self.db_path.parent.mkdir(
             parents=True,
@@ -14,14 +19,15 @@ class SQLiteActivityStore:
 
         self._create_tables()
 
+    
+    @contextmanager
     def _connect(self):
-        connection = sqlite3.connect(
-            self.db_path
-        )
+        with closing(sqlite3.connect(self.db_path)) as connection:
+            connection.row_factory = sqlite3.Row
 
-        connection.row_factory = sqlite3.Row
+            with connection:
+                yield connection
 
-        return connection
 
     def _create_tables(self):
         with self._connect() as connection:

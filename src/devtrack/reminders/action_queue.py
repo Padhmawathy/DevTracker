@@ -4,15 +4,19 @@ import sqlite3
 import time
 from contextlib import closing
 from pathlib import Path
-
+from devtrack.config.paths import get_data_path
 
 class ReminderActionQueue:
     """Pass local notification actions to the collector."""
 
     VALID_ACTIONS = {"snooze", "skip"}
 
-    def __init__(self, path="data/reminder_actions.db"):
-        self.path = Path(path)
+    def __init__(self, path=None):
+        self.path = (
+            Path(path)
+            if path is not None
+            else get_data_path("reminder_actions.db")
+        )
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
         with closing(self._connect()) as connection:

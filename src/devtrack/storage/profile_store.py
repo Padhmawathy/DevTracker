@@ -3,15 +3,19 @@ import json
 import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-
+from devtrack.config.paths import get_data_path
 from devtrack.models.profile import DeveloperProfile
 
 
 class JSONDeveloperProfileStore:
     """Store one developer's profile locally."""
 
-    def __init__(self, path="data/developer_profile.json"):
-        self.path = Path(path)
+    def __init__(self, path=None):
+        self.path = (
+            Path(path)
+            if path is not None
+            else get_data_path("developer_profile.json")
+        )
 
     def load(self) -> DeveloperProfile:
         """Load a profile or create the default profile."""

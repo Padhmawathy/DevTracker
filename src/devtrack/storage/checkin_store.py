@@ -2,21 +2,32 @@
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
+from contextlib import closing, contextmanager
 
+from devtrack.config.paths import get_data_path
 
 class SQLiteCheckInStore:
-    def __init__(self, db_path="data/devtrack.db"):
-        self.db_path = Path(db_path)
+    def __init__(self, db_path=None):
+        self.db_path = (
+            Path(db_path)
+            if db_path is not None
+            else get_data_path("devtrack.db")
+        )
+
         self.db_path.parent.mkdir(
             parents=True,
             exist_ok=True,
         )
+
         self._create_tables()
 
+    @contextmanager
     def _connect(self):
-        connection = sqlite3.connect(self.db_path)
-        connection.row_factory = sqlite3.Row
-        return connection
+        with closing(sqlite3.connect(self.db_path)) as connection:
+            connection.row_factory = sqlite3.Row
+
+            with connection:
+                yield connection
 
     def _create_tables(self):
         with self._connect() as connection:

@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from devtrack.config.paths import get_data_path
 
 from devtrack.models.app_category import AppCategoryRule
 
@@ -10,8 +11,12 @@ from devtrack.models.app_category import AppCategoryRule
 class JSONAppCategoryStore:
     """Store application categories for one local developer."""
 
-    def __init__(self, path="data/app_categories.json"):
-        self.path = Path(path)
+    def __init__(self, path=None):
+        self.path = (
+            Path(path)
+            if path is not None
+            else get_data_path("app_categories.json")
+        )
 
     def load(self) -> list[AppCategoryRule]:
         """Return saved rules or an empty list."""
