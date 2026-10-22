@@ -1,19 +1,54 @@
+import { invoke } from "@tauri-apps/api/core";
 
-const API_BASE_URL =
-  window.location.hostname === "tauri.localhost"
-    ? "http://127.0.0.1:8000"
-    : "";
+type DesktopApiResponse = {
+  status: number;
+  body: string;
+};
 
-export function apiFetch(
+const IS_PACKAGED_DESKTOP =
+  window.location.hostname === "tauri.localhost";
+
+export async function apiFetch(
   input: string,
   init?: RequestInit
 ): Promise<Response> {
-  const url = input.startsWith("/api/")
-    ? `${API_BASE_URL}${input}`
-    : input;
+  if (!IS_PACKAGED_DESKTOP) {
+    return window.fetch(input, init);
+  }
 
-  return window.fetch(url, init);
+  const method = (init?.method ?? "GET").toUpperCase();
+
+  let body: unknown = undefined;
+
+  if (init?.body != null) {
+    if (typeof init.body !== "string") {
+      throw new Error(
+        "Desktop API requests must use JSON request bodies."
+      );
+    }
+
+    body = JSON.parse(init.body);
+  }
+
+  const result = await invoke<DesktopApiResponse>(
+    "desktop_api_request",
+    {
+      request: {
+        path: input,
+        method,
+        body,
+      },
+    }
+  );
+
+  return new Response(result.body, {
+    status: result.status,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
 }
+
 
 // ==========================================
 // DEVTRACKER API SERVICE
@@ -41,6 +76,7 @@ export interface DailySummary {
 export interface Activity {
   id: number;
   process_name: string;
+  display_name?: string;
   process_id: number;
   window_title: string | null;
   started_at: string;
@@ -309,4 +345,26 @@ export async function updateAppCategories(
   }
 
   return (await response.json()) as AppCategoriesResponse;
+}
+
+export async function submitReminderAction(
+  action: "snooze" | "skip",
+  reminderId: string
+): Promise<void> {
+  const response = await apiFetch("/api/reminders/action", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      action,
+      reminder_id: reminderId,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Reminder action failed: ${response.status}`
+    );
+  }
 }

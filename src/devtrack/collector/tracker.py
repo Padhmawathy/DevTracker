@@ -266,7 +266,7 @@ class ActivityTracker:
         self.min_activity_duration = settings.min_activity_duration
         self.collect_window_titles = settings.collect_window_titles
 
-        if not settings.tracking_enabled:
+        if not (settings.tracking_enabled and settings.tracking_consent_granted):
             if self.current_activity:
                 self.finish_activity()
 
@@ -318,6 +318,12 @@ class ActivityTracker:
             return
 
         settings = self.current_settings
+        if not (
+            settings.tracking_consent_granted
+            and settings.tracking_enabled
+            and settings.reminders_enabled
+        ):
+            return
 
         if self.reminder_state.pending:
             # Keep the engine clock updated, but do not
@@ -367,7 +373,7 @@ class ActivityTracker:
         if not self.reminder_state.mark_due():
             return
 
-        
+        self.reminder_state_store.save(self.reminder_state)
         sent = self.notifier.send_checkin_reminder(
             self.reminder_state.reminder_id
         )
@@ -434,9 +440,9 @@ class ActivityTracker:
             self.detect_tracking_gap()
 
             while not self.stop_event.is_set():
+                self.process_reminder_actions()
                 if not self.apply_settings():
-                    self.check_reminder(active=False)
-                    time.sleep(self.poll_interval)
+                    self.stop_event.wait(self.poll_interval)
                     continue
 
                 idle_seconds = get_idle_seconds()

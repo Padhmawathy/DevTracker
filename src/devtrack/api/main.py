@@ -5,7 +5,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from devtrack.models.profile import DeveloperProfile
 from devtrack.storage.profile_store import JSONDeveloperProfileStore
-
+import hmac
+from fastapi import Request
+from fastapi.responses import JSONResponse
 from devtrack.summary.service import DailySummaryService
 from pydantic import BaseModel, Field
 from devtrack.models.checkin import DeveloperCheckIn
@@ -21,7 +23,7 @@ from devtrack.storage.settings_store import JSONSettingsStore
 
 from devtrack.models.app_category import AppCategoryRule
 from devtrack.storage.app_category_store import JSONAppCategoryStore
-
+from devtrack.reminders.action_queue import ReminderActionQueue
 
 app = FastAPI(
     title="DevTracker API",
@@ -38,12 +40,41 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def require_desktop_auth(request: Request, call_next):
+    expected_token = getattr(app.state, "desktop_api_token", None)
+
+    # Development mode uses the separately started backend.
+    if expected_token is None:
+        return await call_next(request)
+
+    if request.method == "OPTIONS":
+        return await call_next(request)
+
+    if request.url.path.startswith("/api/"):
+        supplied_token = request.headers.get(
+            "X-DevTrack-Token", ""
+        )
+
+        if not hmac.compare_digest(
+            supplied_token, expected_token
+        ):
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Unauthorized"},
+            )
+
+    return await call_next(request)
+
 class CheckInRequest(BaseModel):
     project_name: str = Field(min_length=1)
     work_description: str = Field(min_length=1)
     category: str = "Other"
     blocker: str | None = None
 
+class ReminderActionRequest(BaseModel):
+    action: str
+    reminder_id: str
 
 class TrackerSettingsRequest(BaseModel):
     tracking_enabled: bool
@@ -86,6 +117,30 @@ def health():
     return {
         "status": "ok",
         "application": "DevTracker",
+    }
+
+@app.post("/api/reminders/action")
+def submit_reminder_action(payload: ReminderActionRequest):
+    if payload.action not in ("snooze", "skip"):
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid reminder action",
+        )
+
+    queue = ReminderActionQueue()
+
+    try:
+        queue._validate_reminder_id(payload.reminder_id)
+        queue.enqueue(payload.action, payload.reminder_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid reminder ID",
+        )
+
+    return {
+        "status": "queued",
+        "action": payload.action,
     }
 @app.get("/api/summary/today")
 def get_today_summary():

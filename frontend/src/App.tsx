@@ -1,12 +1,14 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Sidebar, { type Page } from "./components/Sidebar";
-
+import { getCurrent } from "@tauri-apps/plugin-deep-link";
 import ActivityTimeline from "./pages/ActivityTimeline";
 import CheckIns from "./pages/CheckIns";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
-
+import { apiFetch, submitReminderAction } from "./services/api";
+import { listen } from "@tauri-apps/api/event";
+import { isTauri } from "@tauri-apps/api/core";
 type DailySummary = {
   date: string;
   total_tracked_seconds: number;
@@ -162,23 +164,56 @@ function Overview({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+
   useEffect(() => {
     const controller = new AbortController();
 
     async function loadSummary() {
+      const maxAttempts = 10;
+      const retryDelayMs = 1000;
+
       try {
-        const response = await fetch("/api/summary/today", {
-          signal: controller.signal,
-        });
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          if (controller.signal.aborted) return;
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          try {
+            const response = await apiFetch("/api/summary/today", {
+              signal: controller.signal,
+            });
+
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data: DailySummary = await response.json();
+
+            if (controller.signal.aborted) return;
+
+            setSummary(data);
+            setError("");
+            return;
+          } catch (err) {
+            if (controller.signal.aborted) return;
+
+            // Retry only while the backend is starting.
+            // HTTP errors should not be retried automatically.
+            if (
+              err instanceof Error &&
+              err.message.startsWith("HTTP ")
+            ) {
+              throw err;
+            }
+
+            if (attempt === maxAttempts) {
+              throw err;
+            }
+
+            await new Promise<void>((resolve) => {
+              setTimeout(resolve, retryDelayMs);
+            });
+          }
         }
-
-        const data: DailySummary = await response.json();
-        setSummary(data);
-        setError("");
-      } catch (err) {
+      } catch {
         if (!controller.signal.aborted) {
           setError("Could not load today's summary.");
         }
@@ -193,6 +228,7 @@ function Overview({
 
     return () => controller.abort();
   }, []);
+
 
   const usage = Object.entries(summary?.application_usage ?? {})
     .sort((a, b) => b[1] - a[1]);
@@ -444,6 +480,51 @@ export default function App() {
     window.history.pushState({}, "", url);
   }
 
+  // Prevent the same notification being processed twice if Windows forwards
+  // it through more than one activation path in quick succession.
+  const recentReminderActions = useRef(new Map<string, number>());
+
+  function handleIncomingDeepLinks(urls: string[]) {
+    for (const rawUrl of urls) {
+      let url: URL;
+      try {
+        url = new URL(rawUrl);
+      } catch {
+        continue;
+      }
+
+      if (url.protocol !== "devtrack:" || url.search || url.hash ||
+          url.username || url.password || url.port) {
+        continue;
+      }
+
+      if (url.hostname === "open" && url.pathname === "/checkins") {
+        navigate("checkins");
+        continue;
+      }
+
+      const action = url.hostname;
+      const reminderId = url.pathname.slice(1);
+      if ((action !== "snooze" && action !== "skip") ||
+          !/^[0-9a-f]{32}$/.test(reminderId)) {
+        continue;
+      }
+
+      const key = `${action}:${reminderId}`;
+      const now = Date.now();
+      const lastSeen = recentReminderActions.current.get(key);
+      if (lastSeen !== undefined && now - lastSeen < 2000) continue;
+      recentReminderActions.current.set(key, now);
+      for (const [oldKey, when] of recentReminderActions.current) {
+        if (now - when > 2000) recentReminderActions.current.delete(oldKey);
+      }
+
+      void submitReminderAction(action, reminderId).catch((error) => {
+        recentReminderActions.current.delete(key);
+        console.error("Reminder action failed:", error);
+      });
+    }
+  }
 
   function renderPage() {
     switch (activePage) {
@@ -462,19 +543,41 @@ export default function App() {
     }
   }
 
-  
-useEffect(() => {
-  function handlePopState() {
-    setActivePage(getPageFromUrl());
-    setMobileOpen(false);
-  }
+  useEffect(() => {
+    function handlePopState() {
+      setActivePage(getPageFromUrl());
+      setMobileOpen(false);
+    }
 
-  window.addEventListener("popstate", handlePopState);
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
-  return () => {
-    window.removeEventListener("popstate", handlePopState);
-  };
-}, []);
+  useEffect(() => {
+    if (!isTauri()) return;
+
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+
+    // When already running, the Rust single-instance callback forwards URLs.
+    void listen<string>("devtrack-deep-link", (event) => {
+      if (!disposed) handleIncomingDeepLinks([event.payload]);
+    }).then((stop) => {
+      if (disposed) stop();
+      else unlisten = stop;
+    }).catch(console.error);
+
+    // When launched from a deep link while not already running, read the
+    // initial URL. Avoid a second onOpenUrl listener for the same activation.
+    void getCurrent().then((urls) => {
+      if (!disposed && urls) handleIncomingDeepLinks(urls);
+    }).catch(console.error);
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-[#17191a] font-sans text-[#e7eae6] lg:h-screen lg:overflow-hidden">

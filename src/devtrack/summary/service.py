@@ -1,3 +1,4 @@
+from devtrack.app_names import resolve_app_name
 
 from datetime import date
 
@@ -25,7 +26,7 @@ class DailySummaryService:
         app_usage = {}
 
         for activity in activities:
-            app = activity["process_name"]
+            app = resolve_app_name(activity["process_name"])
             duration = activity["duration_seconds"]
 
             app_usage[app] = app_usage.get(app, 0) + duration

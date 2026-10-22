@@ -56,22 +56,43 @@ class ReminderActionQueue:
             raise ValueError("Invalid reminder ID")
 
     def enqueue(self, action: str, reminder_id=None):
-        """Add an action, optionally tied to a reminder."""
+        """Queue an action, ignoring rapid duplicate notifications."""
         if action not in self.VALID_ACTIONS:
             raise ValueError("Unsupported reminder action")
 
         if reminder_id is not None:
             self._validate_reminder_id(reminder_id)
 
+        now = time.time()
+
         with closing(self._connect()) as connection:
             with connection:
+                connection.execute("BEGIN IMMEDIATE")
+
+                # Prevent duplicate clicks/activations within 5 seconds.
+                if reminder_id is not None:
+                    existing = connection.execute(
+                        """
+                        SELECT id
+                        FROM reminder_actions
+                        WHERE action = ?
+                        AND reminder_id = ?
+                        AND created_at > ?
+                        LIMIT 1
+                        """,
+                        (action, reminder_id, now - 5),
+                    ).fetchone()
+
+                    if existing is not None:
+                        return
+
                 connection.execute(
                     """
                     INSERT INTO reminder_actions
                         (action, created_at, reminder_id)
                     VALUES (?, ?, ?)
                     """,
-                    (action, time.time(), reminder_id),
+                    (action, now, reminder_id),
                 )
 
     def consume(self):

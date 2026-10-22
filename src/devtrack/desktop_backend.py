@@ -71,9 +71,29 @@ def run_backend(
                 "DevTrack collector did not stop cleanly"
             )
 
+
 def main():
     managed = len(sys.argv) == 2 and sys.argv[1] == "--managed"
+
+    if managed:
+        # Read the token before starting the HTTP server.
+        # The rest of stdin remains available for shutdown.
+        startup_line = sys.stdin.readline().strip()
+
+        if not startup_line.startswith("auth "):
+            raise RuntimeError(
+                "Missing desktop authentication handshake"
+            )
+
+        token = startup_line[5:]
+
+        if len(token) < 32:
+            raise RuntimeError("Invalid desktop authentication token")
+
+        app.state.desktop_api_token = token
+
     run_backend(managed=managed)
+
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { getDailyReport, type DailySummary } from "../services/api";
+import { apiFetch, getDailyReport, type DailySummary } from "../services/api";
 import {
   CalendarDays,
   Clock3,
@@ -67,6 +67,49 @@ export default function Reports() {
     };
   }, [selectedDate]);
 
+  async function downloadMarkdown() {
+    if (loading || !report) return;
+
+    try {
+      setError("");
+
+      const response = await apiFetch(
+        `/api/reports/${encodeURIComponent(selectedDate)}/download`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Report download failed: ${response.status}`);
+      }
+
+      const markdown = await response.text();
+
+      if (markdown.trimStart().startsWith("<!doctype html") ||
+          markdown.trimStart().startsWith("<html")) {
+        throw new Error("The server returned HTML instead of Markdown.");
+      }
+
+      const blob = new Blob([markdown], {
+        type: "text/markdown;charset=utf-8",
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = `${selectedDate}.md`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to download Markdown report."
+      );
+    }
+  }
   const applications = report
     ? Object.entries(report.application_usage).sort(
         (a, b) => b[1] - a[1]
@@ -100,22 +143,19 @@ export default function Reports() {
         />
     </div>
 
-    <a
-        href={`/api/reports/${encodeURIComponent(selectedDate)}/download`}
-        download={`${selectedDate}.md`}
-        aria-disabled={loading || !report}
-        onClick={(event) => {
-        if (loading || !report) event.preventDefault();
-        }}
-        className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-[#17231b] ${
+   <button
+      type="button"
+      disabled={loading || !report}
+      onClick={() => void downloadMarkdown()}
+      className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-[#17231b] ${
         loading || !report
-            ? "cursor-not-allowed bg-[#333b38] opacity-50"
-            : "bg-[#a7c9b4] hover:bg-[#bdd9c7]"
-        }`}
+          ? "cursor-not-allowed bg-[#333b38] opacity-50"
+          : "bg-[#a7c9b4] hover:bg-[#bdd9c7]"
+      }`}
     >
-        <Download size={18} />
-        Download Markdown
-    </a>
+      <Download size={18} />
+      Download Markdown
+    </button>
     </div>
 
       {loading && (

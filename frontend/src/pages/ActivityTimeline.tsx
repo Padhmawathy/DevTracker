@@ -137,7 +137,7 @@ export default function ActivityTimeline() {
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <h3 className="text-[13px] font-medium text-[#edf0eb]">
-                      {activity.process_name}
+                      {activity.display_name || activity.process_name}
                     </h3>
 
                     <span className="font-mono text-[12px] font-medium text-[#aacbb6]">

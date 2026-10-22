@@ -46,7 +46,7 @@ class WindowsNotifier:
             # Always allow the user to open the journal.
             toast.add_actions(
                 label="Open Check-ins",
-                launch="http://127.0.0.1:8000/?page=checkins",
+                launch="devtrack://open/checkins",
             )
 
             # Enable state-changing buttons only when the
@@ -55,7 +55,7 @@ class WindowsNotifier:
                 toast.add_actions(
                     label="Snooze",
                     launch=(
-                        "devtracker-reminder://snooze/"
+                        "devtrack://snooze/"
                         f"{reminder_id}"
                     ),
                 )
@@ -63,7 +63,7 @@ class WindowsNotifier:
                 toast.add_actions(
                     label="Skip",
                     launch=(
-                        "devtracker-reminder://skip/"
+                        "devtrack://skip/"
                         f"{reminder_id}"
                     ),
                 )
