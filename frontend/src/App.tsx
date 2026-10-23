@@ -6,7 +6,7 @@ import ActivityTimeline from "./pages/ActivityTimeline";
 import CheckIns from "./pages/CheckIns";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
-import { apiFetch, submitReminderAction } from "./services/api";
+import { apiFetch, submitReminderAction, getDeveloperProfile, type DeveloperProfile } from "./services/api";
 import { listen } from "@tauri-apps/api/event";
 import { isTauri } from "@tauri-apps/api/core";
 type DailySummary = {
@@ -86,23 +86,21 @@ function Metric({
   index: string;
 }) {
   return (
-    <div className="min-w-0 border-b border-[#2a2d2e] px-5 py-5 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[12px] text-[#8c9495]">{label}</span>
-        <span className="font-mono text-[10px] text-[#51595a]">
-          {index}
-        </span>
+    <div className="border border-[#2b2f30] bg-[#1c1f20] px-5 py-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] text-[#9aa3a1]">{label}</p>
+          <p className="mt-3 text-[15px] font-semibold text-[#f3f5f2]">
+            {value}
+          </p>
+          <p className="mt-2 text-[11px] text-[#6f7877]">{note}</p>
+        </div>
+
+        <span className="text-[10px] text-[#5f6867]">{index}</span>
       </div>
-
-      <p className="mt-4 text-[29px] font-semibold tracking-[-0.055em] text-[#eeeFEB]">
-        {value}
-      </p>
-
-      <p className="mt-1 text-[11px] text-[#686f70]">{note}</p>
     </div>
   );
 }
-
 function SectionHeading({
   title,
   subtitle,
@@ -154,6 +152,17 @@ function EmptyState({
     </div>
   );
 }
+const DEVELOPER_ROLE_LABELS: Record<string, string> = {
+  frontend: "Frontend Developer",
+  backend: "Backend Developer",
+  fullstack: "Full-stack Developer",
+  mobile: "Mobile Developer",
+  devops: "DevOps Engineer",
+};
+
+function getDeveloperRoleLabel(role: string): string {
+  return DEVELOPER_ROLE_LABELS[role] ?? role;
+}
 
 function Overview({
   onNavigate,
@@ -163,13 +172,30 @@ function Overview({
   const [summary, setSummary] = useState<DailySummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [profile, setProfile] = useState<DeveloperProfile | null>(null);
 
+  useEffect(() => {
+    let mounted = true;
+
+    getDeveloperProfile()
+      .then((data) => {
+        if (mounted) setProfile(data);
+      })
+      .catch((error) => {
+        console.error("Unable to load developer profile:", error);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
 
-    async function loadSummary() {
-      const maxAttempts = 10;
+    async function loadSummary(initialLoad = false) {
+      const maxAttempts = initialLoad ? 10 : 1;
       const retryDelayMs = 1000;
 
       try {
@@ -195,8 +221,6 @@ function Overview({
           } catch (err) {
             if (controller.signal.aborted) return;
 
-            // Retry only while the backend is starting.
-            // HTTP errors should not be retried automatically.
             if (
               err instanceof Error &&
               err.message.startsWith("HTTP ")
@@ -215,19 +239,39 @@ function Overview({
         }
       } catch {
         if (!controller.signal.aborted) {
-          setError("Could not load today's summary.");
+          if (initialLoad) {
+            setError("Could not load today's summary.");
+          } else {
+            console.warn("Could not refresh today's summary.");
+          }
         }
       } finally {
-        if (!controller.signal.aborted) {
+        if (initialLoad && !controller.signal.aborted) {
           setLoading(false);
         }
       }
     }
 
-    void loadSummary();
+  async function refreshLoop(initialLoad: boolean) {
+    await loadSummary(initialLoad);
 
-    return () => controller.abort();
-  }, []);
+    if (!controller.signal.aborted) {
+      refreshTimer = setTimeout(() => {
+        void refreshLoop(false);
+      }, 30000);
+    }
+  }
+
+  void refreshLoop(true);
+
+  return () => {
+    controller.abort();
+
+    if (refreshTimer !== undefined) {
+      clearTimeout(refreshTimer);
+    }
+  };
+}, []);
 
 
   const usage = Object.entries(summary?.application_usage ?? {})
@@ -235,9 +279,17 @@ function Overview({
 
   const maxUsage = usage.length > 0 ? usage[0][1] : 0;
   const projects = Object.keys(summary?.projects ?? {});
+  const goalMinutes = profile?.daily_focus_goal_minutes ?? 480;
+  const goalSeconds = goalMinutes * 60;
+  const trackedSeconds = summary?.total_tracked_seconds ?? 0;
 
+  const focusProgress = goalSeconds > 0
+    ? Math.min(100, (trackedSeconds / goalSeconds) * 100)
+    : 0;
+
+  const goalHours = goalMinutes / 60;
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-[#91b5a1]">
@@ -245,8 +297,16 @@ function Overview({
           </p>
 
           <h2 className="mt-2 text-[20px] font-semibold tracking-[-0.04em] text-[#f0f1ed]">
-            Your day, at a glance.
+            {profile?.display_name?.trim()
+              ? `Welcome back, ${profile.display_name.trim()}!`
+              : "Your day, at a glance."}
           </h2>
+
+{profile?.role?.trim() && (
+  <p className="mt-1 text-[12px] font-medium text-[#a7c9b4]">
+    {getDeveloperRoleLabel(profile.role)}
+  </p>
+)}
 
           <p className="mt-1 text-[12px] text-[#858d8d]">
             Activity, progress and context in one place.
@@ -271,8 +331,79 @@ function Overview({
           {error}
         </div>
       )}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <section className="rounded-lg border border-[#2b2f30] bg-[#1c1f20] p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-wider text-[#91b5a1]">
+              Daily Focus Goal
+            </p>
+            <h3 className="mt-2 text-lg font-semibold text-[#f0f1ed]">
+              {formatDuration(trackedSeconds)}
+              <span className="ml-2 text-sm font-normal text-[#858d8d]">
+                / {goalHours.toLocaleString()}h goal
+              </span>
+            </h3>
+          </div>
 
+          <span className="text-xl font-semibold text-[#a7c9b4]">
+            {Math.round(focusProgress)}%
+          </span>
+        </div>
+
+        <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#343a38]">
+          <div
+            className="h-full rounded-full bg-[#a7c9b4] transition-all duration-500"
+            style={{ width: `${focusProgress}%` }}
+          />
+        </div>
+
+        <p className="mt-3 text-[11px] text-[#858d8d]">
+          Progress based on today's recorded activity.
+        </p>
+      </section>
+      {profile && (
+        <section className="rounded-lg border border-[#2b2f30] bg-[#1c1f20] p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-[#91b5a1]">
+                Developer Profile
+              </p>
+              <h3 className="mt-2 text-[15px] font-semibold text-[#f0f1ed]">
+                My Developer Stack
+              </h3>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onNavigate("settings")}
+              className="text-[12px] font-medium text-[#a7c9b4] hover:text-[#c9e3d1]"
+            >
+              Edit Profile →
+            </button>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {[
+              getDeveloperRoleLabel(profile.role),
+              profile.primary_language,
+              profile.primary_editor,
+            ]
+              .filter((value) => value?.trim())
+              .map((value, index) => (
+                <span
+                  key={`${index}-${value}`}
+                  className="rounded-md border border-[#39453f] bg-[#28332d] px-3 py-1.5 text-[12px] text-[#b7d4c1]"
+                >
+                  {value}
+                </span>
+              ))}
+          </div>
+        </section>
+      )}
+      </div>
       <section className="grid grid-cols-2 overflow-hidden rounded-lg border border-[#2b2f30] bg-[#1c1f20] sm:grid-cols-4">
+      
         <Metric
           label="Tracked time"
           value={
@@ -580,7 +711,13 @@ export default function App() {
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-[#17191a] font-sans text-[#e7eae6] lg:h-screen lg:overflow-hidden">
+    <div
+      className="flex min-h-screen font-sans lg:h-screen lg:overflow-hidden"
+      style={{
+        backgroundColor: "var(--dt-page)",
+        color: "var(--dt-text)",
+      }}
+    >
       <Sidebar
         activePage={activePage}
         onNavigate={navigate}
@@ -589,7 +726,13 @@ export default function App() {
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-[76px] shrink-0 items-center justify-between gap-4 border-b border-[#2a2d2e] bg-[#191b1c] px-5 sm:px-8">
+        <header
+          className="flex h-[76px] shrink-0 items-center justify-between gap-4 border-b px-5 sm:px-8"
+          style={{
+            backgroundColor: "var(--dt-sidebar)",
+            borderColor: "var(--dt-border)",
+          }}
+        >
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
@@ -607,7 +750,10 @@ export default function App() {
                 DEVTRACKER / {currentPage.eyebrow}
               </p>
 
-              <h1 className="mt-1 truncate text-[16px] font-semibold tracking-[-0.035em] text-[#f1f2ed]">
+              <h1
+                className="mt-1 truncate text-[16px] font-semibold tracking-[-0.035em]"
+                style={{ color: "var(--dt-text)" }}
+              >
                 {currentPage.title}
               </h1>
             </div>
@@ -629,13 +775,16 @@ export default function App() {
 
         <main className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[1440px] px-5 py-7 sm:px-8 sm:py-9">
-            <div className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-[#2b2f30] pb-6">
+            <div className="mb-5 flex flex-wrap items-end justify-between gap-4 border-b border-[#2b2f30] pb-4">
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#92b9a3]">
                   {currentPage.eyebrow}
                 </p>
 
-                <h2 className="mt-3 text-[25px] font-semibold tracking-[-0.05em] text-[#f0f2ee] sm:text-[30px]">
+                <h2
+                  className="mt-3 text-[25px] font-semibold tracking-[-0.05em] sm:text-[30px]"
+                  style={{ color: "var(--dt-text)" }}
+                >
                   {currentPage.title}
                 </h2>
 
@@ -644,7 +793,14 @@ export default function App() {
                 </p>
               </div>
 
-              <div className="rounded-md border border-[#333939] bg-[#202424] px-3 py-2 font-mono text-[11px] text-[#a2aca7]">
+              <div  
+                className="rounded-md border px-3 py-2 font-mono text-[11px]"
+                style={{
+                  backgroundColor: "var(--dt-surface-raised)",
+                  borderColor: "var(--dt-border)",
+                  color: "var(--dt-text-muted)",
+                }}
+              >
                 {getTodayLabel()}
               </div>
             </div>

@@ -1,13 +1,17 @@
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
+import { initializeTheme } from "./theme";
 import App from "./App.tsx";
+import "./devtrack_light_contrast_patch.css";
 import {
   getTrackerSettings,
   updateTrackerSettings,
   type TrackerSettings,
 } from "./services/api";
-
+import "./page-theme.css";
+// Apply the saved appearance before rendering the interface.
+initializeTheme();
 const DISMISSED_KEY = "devtrack.consent-declined.v1";
 
 type Screen = "loading" | "welcome" | "app" | "error";

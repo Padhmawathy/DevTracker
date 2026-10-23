@@ -85,7 +85,7 @@ export default function ActivityTimeline() {
       <div className="mb-6 flex flex-wrap items-center gap-4">
         <label
           htmlFor="activity-date"
-          className="text-sm text-[#c3ccc5]"
+          className="text-sm text-[var(--dx-body)]"
         >
           Select date
         </label>
@@ -97,26 +97,26 @@ export default function ActivityTimeline() {
           onChange={(event) =>
             setSelectedDate(event.target.value)
           }
-          className="rounded-lg border border-[#39413d] bg-[#202424] px-3 py-2 text-[#f0f2ee] [color-scheme:dark]"
+          className="rounded-lg border border-[var(--dx-border-strong)] bg-[var(--dx-raised)] px-3 py-2 text-[var(--dx-heading)]"
         />
       </div>
 
       {loading && (
-        <p className="text-[#929c95]">
+        <p className="text-[var(--dx-muted)]">
           Loading activity...
         </p>
       )}
 
       {error && (
-        <p role="alert" className="text-[#f1aaa5]">
+        <p role="alert" className="text-[var(--dx-danger)]">
           {error}
         </p>
       )}
 
       {!loading && !error && data && (
         <>
-          <div className="mb-5 rounded-lg border border-[#2b2f30] bg-[#1c1f20] px-5 py-4">
-            <p className="text-sm text-[#929c95]">
+          <div className="mb-5 rounded-lg border border-[var(--dx-border)] bg-[var(--dx-surface)] px-5 py-4">
+            <p className="text-sm text-[var(--dx-muted)]">
               Recorded activity groups
             </p>
             <h2 className="mt-2 text-2xl font-bold">
@@ -125,36 +125,36 @@ export default function ActivityTimeline() {
           </div>
 
           {data.activities.length === 0 ? (
-            <div className="rounded-lg border border-[#2b2f30] bg-[#1c1f20] p-6 text-[#929c95]">
+            <div className="rounded-lg border border-[var(--dx-border)] bg-[var(--dx-surface)] p-6 text-[var(--dx-muted)]">
               No activity recorded for this date.
             </div>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-[#2b2f30] bg-[#1c1f20] divide-y divide-[#2b2f30]">
+            <div className="overflow-hidden rounded-lg border border-[var(--dx-border)] bg-[var(--dx-surface)] divide-y divide-[var(--dx-border)]">
               {data.activities.map((activity, index) => (
                 <div
                   key={`${activity.id}-${index}`}
-                  className="px-5 py-4 transition hover:bg-[#242829]"
+                  className="px-5 py-4 transition hover:bg-[var(--dx-hover)]"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h3 className="text-[13px] font-medium text-[#edf0eb]">
+                    <h3 className="text-[13px] font-medium text-[var(--dx-heading)]">
                       {activity.display_name || activity.process_name}
                     </h3>
 
-                    <span className="font-mono text-[12px] font-medium text-[#aacbb6]">
+                    <span className="font-mono text-[12px] font-medium text-[var(--dx-accent-text)]">
                       {formatDuration(
                         activity.duration_seconds
                       )}
                     </span>
                   </div>
 
-                  <p className="mt-1 text-xs text-[#929c95]">
+                  <p className="mt-1 text-xs text-[var(--dx-muted)]">
                     {formatTime(activity.started_at)}
                     {" → "}
                     {formatTime(activity.ended_at)}
                   </p>
 
                   {activity.window_title && (
-                    <p className="mt-2 break-words text-xs text-[#738078]">
+                    <p className="mt-2 break-words text-xs text-[var(--dx-muted)]">
                       {activity.window_title}
                     </p>
                   )}

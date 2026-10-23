@@ -39,7 +39,12 @@ import {
 
 } from "../services/api";
 
-
+import { Monitor, Moon, Sun } from "lucide-react";
+import {
+  getThemePreference,
+  setThemePreference,
+  type ThemePreference,
+} from "../theme";
 
 
 // Presentation-only duration choices. Persisted API units remain unchanged.
@@ -54,7 +59,7 @@ function durationLabel(totalSeconds: number): string {
   return parts.join(" ");
 }
 
-const fieldClass = "w-full appearance-none rounded-xl border border-[#373d3c] bg-[#17191a] px-4 py-3.5 pr-10 text-[13px] font-medium text-[#e7eae6] outline-none transition-colors hover:border-[#59635e] focus:border-[#a7c9b4] focus:ring-2 focus:ring-[#a7c9b4]/10 disabled:cursor-not-allowed disabled:opacity-40";
+const fieldClass = "w-full appearance-none rounded-xl border border-[var(--dx-border-strong)] bg-[var(--dx-input)] px-4 py-3.5 pr-10 text-[13px] font-medium text-[var(--dx-heading)] outline-none transition-colors hover:border-[var(--dx-accent)] focus:border-[var(--dx-accent)] focus:ring-2 focus:ring-[var(--dx-accent-soft)] disabled:cursor-not-allowed disabled:opacity-40";
 
 function DurationSelect({
   id, label, value, options, unit, onChange, disabled, help,
@@ -71,7 +76,7 @@ function DurationSelect({
   const choices = options.includes(value) ? options : [...options, value].sort((a, b) => a - b);
   return (
     <div className="space-y-2">
-      <label htmlFor={id} className="block text-[12px] font-medium text-[#b8c0ba]">{label}</label>
+      <label htmlFor={id} className="block text-[12px] font-medium text-[var(--dx-body)]">{label}</label>
       <div className="relative">
         <select id={id} value={value} onChange={(event) => onChange(Number(event.target.value))}
           disabled={disabled} className={fieldClass}>
@@ -83,11 +88,11 @@ function DurationSelect({
           ))}
         </select>
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-          className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a7c9b4]">
+          className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--dx-accent-text)]">
           <path d="m6 9 6 6 6-6" />
         </svg>
       </div>
-      {help && <p className="text-[11px] leading-relaxed text-[#858e8b]">{help}</p>}
+      {help && <p className="text-[11px] leading-relaxed text-[var(--dx-muted)]">{help}</p>}
     </div>
   );
 }
@@ -96,38 +101,45 @@ function FocusGoalSlider({ value, onChange }: { value: number; onChange: (minute
   const safeValue = Math.min(720, Math.max(30, value));
   const progress = ((safeValue - 30) / (720 - 30)) * 100;
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#303536] bg-gradient-to-br from-[#202425] via-[#1d2021] to-[#1b1e1f] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.16)] sm:p-3">
+    <section className="overflow-hidden rounded-2xl border border-[var(--dx-border)] bg-gradient-to-br from-[var(--dx-surface)] via-[var(--dx-surface)] to-[var(--dx-surface)] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.16)] sm:p-3">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#3b4842] bg-[#29332e]">
-          <Target size={20} className="text-[#b8ddc5]" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--dx-border-strong)] bg-[var(--dx-accent-soft)]">
+          <Target size={20} className="text-[var(--dx-accent-text)]" />
         </div>
         <div>
-          <h3 className="text-[15px] font-semibold text-[#f0f2ee]">Daily focus goal</h3>
-          <p className="mt-0.5 text-[11px] text-[#929c95]">Set the time you want to focus each day</p>
+          <h3 className="text-[15px] font-semibold text-[var(--dx-heading)]">Daily focus goal</h3>
+          <p className="mt-0.5 text-[11px] text-[var(--dx-muted)]">Set the time you want to focus each day</p>
         </div>
       </div>
       <div className="mt-6 flex items-baseline gap-2">
-        <span className="text-3xl font-bold tracking-tight text-[#f0f2ee] sm:text-[26px] font-semibold tracking-tight">{durationLabel(safeValue * 60)}</span>
-        <span className="text-[12px] text-[#929c95]">per day</span>
+        <span className="text-3xl font-bold tracking-tight text-[var(--dx-heading)] sm:text-[26px] font-semibold tracking-tight">{durationLabel(safeValue * 60)}</span>
+        <span className="text-[12px] text-[var(--dx-muted)]">per day</span>
       </div>
       <label htmlFor="profile-focus-goal" className="sr-only">Daily focus goal between 30 minutes and 12 hours</label>
       <input id="profile-focus-goal" type="range" min={30} max={720} step={30} value={safeValue}
         onChange={(event) => onChange(Number(event.target.value))}
-        style={{ background: `linear-gradient(90deg, #a7c9b4 0%, #a7c9b4 ${progress}%, #343b38 ${progress}%, #343b38 100%)` }}
-        className="mt-7 h-2.5 w-full cursor-pointer appearance-none rounded-full accent-[#b8d9c4]"
+        style={{ background: `linear-gradient(90deg, var(--dx-accent) 0%, var(--dx-accent) ${progress}%, var(--dx-track) ${progress}%, var(--dx-track) 100%)` }}
+        className="mt-7 h-2.5 w-full cursor-pointer appearance-none rounded-full accent-[var(--dx-accent)]"
       />
-      <div className="mt-3 flex justify-between text-[11px] text-[#929c95]">
+      <div className="mt-3 flex justify-between text-[11px] text-[var(--dx-muted)]">
         <span>30 minutes</span><span>12 hours</span>
       </div>
-      <div className="mt-5 flex items-start gap-2 rounded-xl border border-[#343c38] bg-[#1a1e1c]/70 px-3.5 py-3 text-[12px] leading-relaxed text-[#b8c0ba]">
-        <Sparkles size={16} className="mt-0.5 shrink-0 text-[#9fc9a9]" />
-        <span>Your daily tracking target is <strong className="font-semibold text-[#f0f2ee]">{durationLabel(safeValue * 60)}</strong>. Save your profile to apply it.</span>
+      <div className="mt-5 flex items-start gap-2 rounded-xl border border-[var(--dx-border)] bg-[var(--dx-raised)] px-3.5 py-3 text-[12px] leading-relaxed text-[var(--dx-body)]">
+        <Sparkles size={16} className="mt-0.5 shrink-0 text-[var(--dx-accent-text)]" />
+        <span>Your daily tracking target is <strong className="font-semibold text-[var(--dx-heading)]">{durationLabel(safeValue * 60)}</strong>. Save your profile to apply it.</span>
       </div>
     </section>
   );
 }
 
 export default function Settings() {
+
+  const [theme, setTheme] = useState<ThemePreference>(getThemePreference);
+
+  function changeTheme(nextTheme: ThemePreference) {
+    setTheme(nextTheme);
+    setThemePreference(nextTheme);
+  }
 
   const [settings, setSettings] = useState<TrackerSettings | null>(null);
 
@@ -411,7 +423,7 @@ export default function Settings() {
 
   if (loading) {
 
-    return <p className="text-[#929c95]">Loading settings...</p>;
+    return <p className="text-[var(--dx-muted)]">Loading settings...</p>;
 
   }
 
@@ -421,7 +433,7 @@ export default function Settings() {
 
     return (
 
-      <p role="alert" className="text-[#f1aaa5]">
+      <p role="alert" className="text-[var(--dx-danger)]">
 
         {error || "Tracker settings are unavailable."}
 
@@ -435,33 +447,65 @@ export default function Settings() {
 
   return (
 
-    <div className="max-w-5xl space-y-7">
+    <div className="max-w-5xl space-y-5">
 
+      <section className="overflow-hidden rounded-2xl border border-[var(--dx-border)] bg-[var(--dx-surface)]">
+        <div className="border-b border-[var(--dx-border)] px-5 py-4 sm:px-6">
+          <h2 className="text-[14px] font-semibold text-[var(--dx-heading)]">
+            Appearance
+          </h2>
+          <p className="mt-1 text-[11px] text-[var(--dx-muted)]">
+            Choose how DevTrack looks on your device.
+          </p>
+        </div>
 
+        <div className="grid grid-cols-3 gap-3 p-5 sm:p-6">
+          {([
+            { value: "dark", label: "Dark", Icon: Moon },
+            { value: "light", label: "Light", Icon: Sun },
+            { value: "system", label: "System", Icon: Monitor },
+          ] as const).map(({ value, label, Icon }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => changeTheme(value)}
+              aria-pressed={theme === value}
+              className={`flex flex-col items-center gap-2 rounded-xl border px-3 py-4 text-[12px] font-medium transition ${
+                theme === value
+                  ? "border-[var(--dx-accent)] bg-[var(--dx-selected)] text-[var(--dx-accent-text)]"
+                  : "border-[var(--dx-border-strong)] bg-[var(--dx-raised)] text-[var(--dx-muted)] hover:border-[var(--dx-accent)]"
+              }`}
+            >
+              <Icon size={19} />
+              {label}
+            </button>
+          ))}
+        </div>
+      </section>
 
         <form
 
           onSubmit={handleProfileSave}
 
-          className="overflow-hidden rounded-2xl border border-[#2b2f30] bg-[#1c1f20] shadow-[0_12px_35px_rgba(0,0,0,0.12)]"
+          className="overflow-hidden rounded-2xl border border-[var(--dx-border)] bg-[var(--dx-surface)] shadow-[0_12px_35px_rgba(0,0,0,0.12)]"
 
         >
 
-          <div className="flex items-center gap-3 border-b border-[#2b2f30] px-5 py-5 sm:px-6">
+          <div className="flex items-center gap-3 border-b border-[var(--dx-border)] px-5 py-5 sm:px-6">
 
-            <UserRound size={19} className="text-[#a7c9b4]" />
+            <UserRound size={19} className="text-[var(--dx-accent-text)]" />
 
 
 
             <div>
 
-              <h2 className="text-[14px] font-semibold text-[#f0f2ee]">
+              <h2 className="text-[14px] font-semibold text-[var(--dx-heading)]">
 
                 Developer Profile
 
               </h2>
 
-              <p className="mt-1 text-[11px] text-[#858e8b]">
+              <p className="mt-1 text-[11px] text-[var(--dx-muted)]">
 
                 Personalize your work journal and future insights.
 
@@ -477,7 +521,7 @@ export default function Settings() {
 
             {profileLoading ? (
 
-              <p className="text-sm text-[#929c95]">
+              <p className="text-sm text-[var(--dx-muted)]">
 
                 Loading developer profile...
 
@@ -495,7 +539,7 @@ export default function Settings() {
 
                       htmlFor="profile-name"
 
-                      className="mb-2 block text-[12px] text-[#b8c0ba]"
+                      className="mb-2 block text-[12px] text-[var(--dx-body)]"
 
                     >
 
@@ -527,7 +571,7 @@ export default function Settings() {
 
                       placeholder="Your name"
 
-                      className="w-full rounded-md border border-[#373d3c] bg-[#17191a] px-3 py-2.5 text-[13px] text-[#e7eae6] outline-none focus:border-[#a7c9b4]"
+                      className="w-full rounded-md border border-[var(--dx-border-strong)] bg-[var(--dx-input)] px-3 py-2.5 text-[13px] text-[var(--dx-heading)] outline-none focus:border-[var(--dx-accent)]"
 
                     />
 
@@ -541,7 +585,7 @@ export default function Settings() {
 
                       htmlFor="profile-role"
 
-                      className="mb-2 block text-[12px] text-[#b8c0ba]"
+                      className="mb-2 block text-[12px] text-[var(--dx-body)]"
 
                     >
 
@@ -561,7 +605,7 @@ export default function Settings() {
 
                       }
 
-                      className="w-full rounded-md border border-[#373d3c] bg-[#17191a] px-3 py-2.5 text-[13px] text-[#e7eae6] outline-none focus:border-[#a7c9b4]"
+                      className="w-full rounded-md border border-[var(--dx-border-strong)] bg-[var(--dx-input)] px-3 py-2.5 text-[13px] text-[var(--dx-heading)] outline-none focus:border-[var(--dx-accent)]"
 
                     >
 
@@ -593,7 +637,7 @@ export default function Settings() {
 
                       htmlFor="profile-language"
 
-                      className="mb-2 block text-[12px] text-[#b8c0ba]"
+                      className="mb-2 block text-[12px] text-[var(--dx-body)]"
 
                     >
 
@@ -625,7 +669,7 @@ export default function Settings() {
 
                       placeholder="Python, TypeScript, Java..."
 
-                      className="w-full rounded-md border border-[#373d3c] bg-[#17191a] px-3 py-2.5 text-[13px] text-[#e7eae6] outline-none focus:border-[#a7c9b4]"
+                      className="w-full rounded-md border border-[var(--dx-border-strong)] bg-[var(--dx-input)] px-3 py-2.5 text-[13px] text-[var(--dx-heading)] outline-none focus:border-[var(--dx-accent)]"
 
                     />
 
@@ -639,7 +683,7 @@ export default function Settings() {
 
                       htmlFor="profile-editor"
 
-                      className="mb-2 block text-[12px] text-[#b8c0ba]"
+                      className="mb-2 block text-[12px] text-[var(--dx-body)]"
 
                     >
 
@@ -671,7 +715,7 @@ export default function Settings() {
 
                       placeholder="VS Code, IntelliJ..."
 
-                      className="w-full rounded-md border border-[#373d3c] bg-[#17191a] px-3 py-2.5 text-[13px] text-[#e7eae6] outline-none focus:border-[#a7c9b4]"
+                      className="w-full rounded-md border border-[var(--dx-border-strong)] bg-[var(--dx-input)] px-3 py-2.5 text-[13px] text-[var(--dx-heading)] outline-none focus:border-[var(--dx-accent)]"
 
                     />
 
@@ -694,7 +738,7 @@ export default function Settings() {
 
                   disabled={profileSaving}
 
-                  className="flex items-center gap-2 rounded-md bg-[#a7c9b4] px-5 py-2.5 text-sm font-semibold text-[#17231b] hover:bg-[#bdd9c7] disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-md bg-[var(--dx-accent)] px-5 py-2.5 text-sm font-semibold text-[var(--dx-accent-contrast)] hover:bg-[var(--dx-accent-hover)] disabled:opacity-50"
 
                 >
 
@@ -708,7 +752,7 @@ export default function Settings() {
 
             ) : (
 
-              <p className="text-sm text-[#f1aaa5]">
+              <p className="text-sm text-[var(--dx-danger)]">
 
                 Developer profile is unavailable.
 
@@ -720,7 +764,7 @@ export default function Settings() {
 
             {profileSuccess && (
 
-              <p role="status" className="text-sm text-[#a7c9b4]">
+              <p role="status" className="text-sm text-[var(--dx-accent-text)]">
 
                 {profileSuccess}
 
@@ -732,7 +776,7 @@ export default function Settings() {
 
             {profileError && (
 
-              <p role="alert" className="text-sm text-[#f1aaa5]">
+              <p role="alert" className="text-sm text-[var(--dx-danger)]">
 
                 {profileError}
 
@@ -752,7 +796,7 @@ export default function Settings() {
 
         <form onSubmit={handleSave} className="space-y-6">
 
-          <section className="space-y-6 rounded-2xl border border-[#2b2f30] bg-[#1c1f20] p-5 shadow-[0_12px_35px_rgba(0,0,0,0.12)] sm:p-6">
+          <section className="space-y-6 rounded-2xl border border-[var(--dx-border)] bg-[var(--dx-surface)] p-5 shadow-[0_12px_35px_rgba(0,0,0,0.12)] sm:p-6">
 
             <h2 className="flex items-center gap-2 text-sm font-semibold">
 
@@ -767,7 +811,7 @@ export default function Settings() {
             <label className="flex items-center justify-between gap-4">
               <span>
                 <span className="block font-medium">Enable activity tracking</span>
-                <span className="block text-sm text-[#929c95]">
+                <span className="block text-sm text-[var(--dx-muted)]">
                   Allow the running collector to record activity.
                 </span>
               </span>
@@ -796,15 +840,15 @@ export default function Settings() {
                     updateField("tracking_enabled", enabled);
                   }
                 }}
-                className="h-4 w-4 accent-[#a7c9b4]"
+                className="h-4 w-4 accent-[var(--dx-accent)]"
               />
             </label>
 
-            <div className="rounded-lg border border-[#39413d] p-4">
-              <p className="text-sm text-[#c3ccc5]">
+            <div className="rounded-lg border border-[var(--dx-border-strong)] p-4">
+              <p className="text-sm text-[var(--dx-body)]">
                 Consent status: {settings.tracking_consent_granted ? "Granted" : "Not granted"}
               </p>
-              <p className="mt-2 text-xs text-[#929c95]">
+              <p className="mt-2 text-xs text-[var(--dx-muted)]">
                 DevTrack records application usage and, when enabled, active window titles.
                 Tracking data is stored locally. You can withdraw permission at any time.
               </p>
@@ -819,19 +863,19 @@ export default function Settings() {
                     } : current);
                     setSuccess("");
                   }}
-                  className="mt-3 rounded-md border border-[#6b4848] px-3 py-2 text-sm text-[#f1aaa5]"
+                  className="mt-3 rounded-md border border-[var(--dx-danger-border)] px-3 py-2 text-sm text-[var(--dx-danger)]"
                 >
                   Withdraw tracking consent
                 </button>
               )}
-              <p className="mt-2 text-xs text-[#929c95]">
+              <p className="mt-2 text-xs text-[var(--dx-muted)]">
                 Save settings to apply your changes.
               </p>
             </div>
 
-            <div className="flex items-start gap-3 rounded-xl border border-[#39413d] bg-[#17231b] px-4 py-3">
-              <Clock3 size={18} className="mt-0.5 shrink-0 text-[#a7c9b4]" />
-              <p className="text-[12px] leading-relaxed text-[#b8c0ba]">Choose how precisely DevTrack records app changes, and when inactive time should stop counting.</p>
+            <div className="flex items-start gap-3 rounded-xl border border-[var(--dx-border-strong)] bg-[var(--dx-accent-soft)] px-4 py-3">
+              <Clock3 size={18} className="mt-0.5 shrink-0 text-[var(--dx-accent-text)]" />
+              <p className="text-[12px] leading-relaxed text-[var(--dx-body)]">Choose how precisely DevTrack records app changes, and when inactive time should stop counting.</p>
             </div>
             <div className="grid gap-5 sm:grid-cols-2">
             <DurationSelect
@@ -873,7 +917,7 @@ export default function Settings() {
 
 
 
-          <section className="space-y-6 rounded-2xl border border-[#2b2f30] bg-[#1c1f20] p-5 shadow-[0_12px_35px_rgba(0,0,0,0.12)] sm:p-6">
+          <section className="space-y-6 rounded-2xl border border-[var(--dx-border)] bg-[var(--dx-surface)] p-5 shadow-[0_12px_35px_rgba(0,0,0,0.12)] sm:p-6">
 
             <h2 className="flex items-center gap-2 text-sm font-semibold">
 
@@ -895,7 +939,7 @@ export default function Settings() {
 
                 </span>
 
-                <span className="block text-sm text-[#929c95]">
+                <span className="block text-sm text-[var(--dx-muted)]">
 
                   When disabled, new activity records contain application
 
@@ -925,7 +969,7 @@ export default function Settings() {
 
                 }
 
-                className="h-4 w-4 accent-[#a7c9b4]"
+                className="h-4 w-4 accent-[var(--dx-accent)]"
 
               />
 
@@ -933,7 +977,7 @@ export default function Settings() {
 
 
 
-            <p className="text-xs text-[#738078]">
+            <p className="text-xs text-[var(--dx-muted)]">
 
               Changing this option does not remove titles already stored
 
@@ -947,21 +991,21 @@ export default function Settings() {
 
 
 
-          <section className="overflow-hidden rounded-2xl border border-[#2b2f30] bg-[#1c1f20] shadow-[0_12px_35px_rgba(0,0,0,0.12)]">
+          <section className="overflow-hidden rounded-2xl border border-[var(--dx-border)] bg-[var(--dx-surface)] shadow-[0_12px_35px_rgba(0,0,0,0.12)]">
 
-            <div className="flex items-center gap-3 border-b border-[#2b2f30] px-5 py-5 sm:px-6">
+            <div className="flex items-center gap-3 border-b border-[var(--dx-border)] px-5 py-5 sm:px-6">
 
-              <Bell size={18} className="text-[#a7c9b4]" />
+              <Bell size={18} className="text-[var(--dx-accent-text)]" />
 
               <div>
 
-                <h2 className="text-[14px] font-semibold text-[#f0f2ee]">
+                <h2 className="text-[14px] font-semibold text-[var(--dx-heading)]">
 
                   Smart check-in reminders
 
                 </h2>
 
-                <p className="mt-1 text-[11px] text-[#858e8b]">
+                <p className="mt-1 text-[11px] text-[var(--dx-muted)]">
 
                   Set a comfortable rhythm for recording your progress.
 
@@ -979,13 +1023,13 @@ export default function Settings() {
 
                 <span>
 
-                  <span className="block text-[13px] font-medium text-[#e1e5e0]">
+                  <span className="block text-[13px] font-medium text-[var(--dx-heading)]">
 
                     Enable reminders
 
                   </span>
 
-                  <span className="mt-1 block text-[11px] text-[#858e8b]">
+                  <span className="mt-1 block text-[11px] text-[var(--dx-muted)]">
 
                     Allow DevTracker to send check-in reminders.
 
@@ -1007,7 +1051,7 @@ export default function Settings() {
 
                   }
 
-                  className="h-4 w-4 accent-[#a7c9b4]"
+                  className="h-4 w-4 accent-[var(--dx-accent)]"
 
                 />
 
@@ -1047,7 +1091,7 @@ export default function Settings() {
 
                     htmlFor="reminder-work-start"
 
-                    className="mb-2 block text-[12px] text-[#b8c0ba]"
+                    className="mb-2 block text-[12px] text-[var(--dx-body)]"
 
                   >
 
@@ -1071,7 +1115,7 @@ export default function Settings() {
 
                     }
 
-                    className="w-full rounded-md border border-[#373d3c] bg-[#17191a] px-3 py-2.5 text-[13px] text-[#e7eae6] outline-none focus:border-[#a7c9b4]"
+                    className="w-full rounded-md border border-[var(--dx-border-strong)] bg-[var(--dx-input)] px-3 py-2.5 text-[13px] text-[var(--dx-heading)] outline-none focus:border-[var(--dx-accent)]"
 
                   />
 
@@ -1085,7 +1129,7 @@ export default function Settings() {
 
                     htmlFor="reminder-work-end"
 
-                    className="mb-2 block text-[12px] text-[#b8c0ba]"
+                    className="mb-2 block text-[12px] text-[var(--dx-body)]"
 
                   >
 
@@ -1109,7 +1153,7 @@ export default function Settings() {
 
                     }
 
-                    className="w-full rounded-md border border-[#373d3c] bg-[#17191a] px-3 py-2.5 text-[13px] text-[#e7eae6] outline-none focus:border-[#a7c9b4]"
+                    className="w-full rounded-md border border-[var(--dx-border-strong)] bg-[var(--dx-input)] px-3 py-2.5 text-[13px] text-[var(--dx-heading)] outline-none focus:border-[var(--dx-accent)]"
 
                   />
 
@@ -1119,17 +1163,17 @@ export default function Settings() {
 
 
 
-              <label className="flex items-center justify-between gap-4 border-t border-[#2b2f30] pt-5">
+              <label className="flex items-center justify-between gap-4 border-t border-[var(--dx-border)] pt-5">
 
                 <span>
 
-                  <span className="block text-[13px] font-medium text-[#e1e5e0]">
+                  <span className="block text-[13px] font-medium text-[var(--dx-heading)]">
 
                     Respect idle time
 
                   </span>
 
-                  <span className="mt-1 block text-[11px] text-[#858e8b]">
+                  <span className="mt-1 block text-[11px] text-[var(--dx-muted)]">
 
                     Avoid sending reminders while the computer is idle.
 
@@ -1151,7 +1195,7 @@ export default function Settings() {
 
                   }
 
-                  className="h-4 w-4 accent-[#a7c9b4]"
+                  className="h-4 w-4 accent-[var(--dx-accent)]"
 
                 />
 
@@ -1171,7 +1215,7 @@ export default function Settings() {
 
             disabled={saving}
 
-            className="flex items-center gap-2 rounded-md bg-[#a7c9b4] px-5 py-2.5 text-sm font-semibold text-[#17231b] hover:bg-[#bdd9c7] disabled:opacity-50"
+            className="flex items-center gap-2 rounded-md bg-[var(--dx-accent)] px-5 py-2.5 text-sm font-semibold text-[var(--dx-accent-contrast)] hover:bg-[var(--dx-accent-hover)] disabled:opacity-50"
 
           >
 
@@ -1185,7 +1229,7 @@ export default function Settings() {
 
           {success && (
 
-            <p role="status" className="text-sm text-[#a7c9b4]">
+            <p role="status" className="text-sm text-[var(--dx-accent-text)]">
 
               {success}
 
@@ -1197,7 +1241,7 @@ export default function Settings() {
 
           {error && (
 
-            <p role="alert" className="text-sm text-[#f1aaa5]">
+            <p role="alert" className="text-sm text-[var(--dx-danger)]">
 
               {error}
 

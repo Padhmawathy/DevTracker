@@ -1,15 +1,382 @@
-
+@import "@fontsource/geist-sans/400.css";
+@import "@fontsource/geist-sans/500.css";
+@import "@fontsource/geist-sans/600.css";
+@import "@fontsource/geist-sans/700.css";
 @import "tailwindcss";
 
-:root {
-  font-family: Inter, system-ui, sans-serif;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+@theme {
+  --font-sans: "Geist Sans", system-ui, sans-serif;
 }
 
-body {
+:root {
+  font-family: "Geist Sans", system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  color-scheme: dark;
+
+  /* Dark theme defaults */
+  --bg: #0f1112;
+  --surface: #171a1b;
+  --surface-2: #1d2021;
+  --surface-3: #232728;
+  --sidebar: #121415;
+  --sidebar-elevated: #1a1d1e;
+  --border: #2c3132;
+  --border-soft: #353a3b;
+
+  --text: #eef2ef;
+  --text-strong: #ffffff;
+  --text-muted: #a8b2ad;
+  --text-soft: #7f8a85;
+
+  --accent: #4e8b68;
+  --accent-strong: #5b9c76;
+  --accent-soft: #d9ede1;
+  --accent-bg: rgba(95, 151, 117, 0.14);
+
+  --button-text: #ffffff;
+  --input-bg: #17191a;
+  --input-border: #373d3c;
+
+  --card-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #eef2ef;
+  --surface: #ffffff;
+  --surface-2: #f7f9f7;
+  --surface-3: #f1f5f2;
+  --sidebar: #f5f7f5;
+  --sidebar-elevated: #eef3ef;
+  --border: #d3dbd5;
+  --border-soft: #c7d2cb;
+
+  --text: #1c2520;
+  --text-strong: #101714;
+  --text-muted: #4f6158;
+  --text-soft: #6e7f76;
+
+  --accent: #4f8b67;
+  --accent-strong: #3f7757;
+  --accent-soft: #e4f0e8;
+  --accent-bg: #edf5f0;
+
+  --button-text: #ffffff;
+  --input-bg: #ffffff;
+  --input-border: #c8d2cb;
+
+  --card-shadow: 0 10px 24px rgba(16, 24, 20, 0.06);
+}
+
+html,
+body,
+#root {
   margin: 0;
   min-width: 320px;
-  background: #0b1120;
-  color: #f8fafc;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ---------- global surfaces ---------- */
+
+body,
+.bg-\[\#0b1120\],
+.bg-\[\#111315\],
+.bg-\[\#151617\],
+.bg-\[\#17191a\],
+.bg-\[\#1c1f20\],
+.bg-\[\#202425\],
+.bg-\[\#1d2021\],
+.bg-\[\#1b1e1f\] {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+.bg-\[\#151617\] {
+  background-color: var(--sidebar) !important;
+}
+
+.bg-\[\#17191a\],
+.bg-\[\#1c1f20\],
+.bg-\[\#202425\],
+.bg-\[\#1d2021\],
+.bg-\[\#1b1e1f\] {
+  background-color: var(--surface) !important;
+}
+
+.bg-\[\#222729\],
+.bg-\[\#232728\],
+.bg-\[\#242729\] {
+  background-color: var(--surface-2) !important;
+}
+
+.border-\[\#26282b\],
+.border-\[\#2b2f30\],
+.border-\[\#303536\],
+.border-\[\#373d3c\],
+.border-\[\#41474b\] {
+  border-color: var(--border) !important;
+}
+
+/* ---------- text ---------- */
+
+.text-\[\#f0f1ed\],
+.text-\[\#f0f2ee\],
+.text-\[\#f2f2f0\],
+.text-\[\#e7eae6\],
+.text-white,
+.text-slate-50,
+.text-slate-100,
+.text-slate-200 {
+  color: var(--text-strong) !important;
+}
+
+.text-\[\#d3d8d5\],
+.text-\[\#b8c0ba\],
+.text-\[\#929c95\],
+.text-slate-300,
+.text-slate-400 {
+  color: var(--text-muted) !important;
+}
+
+.text-\[\#858d8d\],
+.text-\[\#858e8b\],
+.text-\[\#777d80\],
+.text-\[\#747d7c\],
+.text-\[\#686e70\],
+.text-slate-500,
+.text-slate-600 {
+  color: var(--text-soft) !important;
+}
+
+.text-\[\#a7c9b4\],
+.text-\[\#91b5a1\],
+.text-\[\#c9e3d1\],
+.text-\[\#9cbba8\],
+.text-\[\#bdd9c7\] {
+  color: var(--accent) !important;
+}
+
+/* ---------- sidebar ---------- */
+
+aside {
+  background: var(--sidebar) !important;
+  border-color: var(--border) !important;
+}
+
+aside .bg-\[\#222729\],
+aside .bg-\[\#232728\],
+aside .bg-\[\#242729\] {
+  background-color: var(--sidebar-elevated) !important;
+}
+
+aside .hover\:bg-\[\#242729\]:hover {
+  background-color: var(--accent-bg) !important;
+}
+
+aside .border-r {
+  border-color: var(--border) !important;
+}
+
+/* ---------- cards / panels ---------- */
+
+.rounded-lg,
+.rounded-xl,
+.rounded-2xl {
+  box-shadow: var(--card-shadow);
+}
+
+.shadow-\[0_12px_35px_rgba\(0\,0\,0\,0\.12\)\],
+.shadow-\[0_18px_55px_rgba\(0\,0\,0\,0\.16\)\] {
+  box-shadow: var(--card-shadow) !important;
+}
+
+/* ---------- buttons ---------- */
+
+.bg-\[\#a7c9b4\],
+.bg-\[\#4f8b67\],
+.bg-\[\#3f7757\] {
+  background-color: var(--accent) !important;
+  color: var(--button-text) !important;
+}
+
+.hover\:bg-\[\#bdd9c7\]:hover,
+.hover\:bg-\[\#5b9c76\]:hover {
+  background-color: var(--accent-strong) !important;
+}
+
+.border-\[\#9cbba8\] {
+  border-color: var(--accent) !important;
+}
+
+/* ---------- form fields ---------- */
+
+input,
+textarea,
+select {
+  background: var(--input-bg) !important;
+  color: var(--text-strong) !important;
+  border-color: var(--input-border) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-soft) !important;
+}
+
+label {
+  color: var(--text-muted) !important;
+}
+
+select option {
+  background: var(--surface) !important;
+  color: var(--text-strong) !important;
+}
+
+/* Better light-mode select consistency */
+:root[data-theme="light"] select {
+  background-color: #ffffff !important;
+  color: #142019 !important;
+}
+
+:root[data-theme="light"] option {
+  background-color: #ffffff !important;
+  color: #142019 !important;
+}
+
+/* ---------- special chips / pills ---------- */
+
+.bg-\[\#352525\] {
+  background-color: #fff3f2 !important;
+}
+
+.border-\[\#704847\] {
+  border-color: #e2b0aa !important;
+}
+
+.text-\[\#e9aaa7\],
+.text-\[\#f1aaa5\] {
+  color: #b45858 !important;
+}
+
+/* ---------- progress bars ---------- */
+
+.bg-\[\#a7c9b4\]\/20 {
+  background-color: rgba(79, 139, 103, 0.16) !important;
+}
+
+/* ---------- Activity page fixes ---------- */
+
+:root[data-theme="light"] .activity-row,
+:root[data-theme="light"] [data-activity-row] {
+  background: #ffffff !important;
+  border-color: var(--border) !important;
+}
+
+:root[data-theme="light"] .activity-row:hover,
+:root[data-theme="light"] [data-activity-row]:hover {
+  background: #f5faf6 !important;
+}
+
+:root[data-theme="light"] .activity-row-title,
+:root[data-theme="light"] [data-activity-title] {
+  color: #17211b !important;
+  font-weight: 600;
+}
+
+:root[data-theme="light"] .activity-row-meta,
+:root[data-theme="light"] [data-activity-meta] {
+  color: #5d6e65 !important;
+}
+
+:root[data-theme="light"] .activity-row-duration,
+:root[data-theme="light"] [data-activity-duration] {
+  color: #6d9a7d !important;
+  font-weight: 600;
+}
+
+/* Fallback for current activity page classes if custom attrs are not used */
+:root[data-theme="light"] .text-slate-300 {
+  color: #4f6158 !important;
+}
+
+:root[data-theme="light"] .text-slate-400 {
+  color: #5f7068 !important;
+}
+
+:root[data-theme="light"] .text-slate-500 {
+  color: #72827a !important;
+}
+
+:root[data-theme="light"] .border-slate-800,
+:root[data-theme="light"] .border-slate-700 {
+  border-color: #d4ddd6 !important;
+}
+
+:root[data-theme="light"] .bg-slate-900,
+:root[data-theme="light"] .bg-slate-950,
+:root[data-theme="light"] .bg-slate-800 {
+  background-color: #ffffff !important;
+}
+
+/* ---------- Reports page fixes ---------- */
+
+:root[data-theme="light"] .report-app-name,
+:root[data-theme="light"] [data-report-app] {
+  color: #1d2822 !important;
+  font-weight: 500;
+}
+
+:root[data-theme="light"] .report-app-duration,
+:root[data-theme="light"] [data-report-duration] {
+  color: #6f9c7f !important;
+  font-weight: 600;
+}
+
+:root[data-theme="light"] .report-section-title {
+  color: #111916 !important;
+}
+
+/* ---------- Check-ins page fixes ---------- */
+
+:root[data-theme="light"] .checkin-card,
+:root[data-theme="light"] [data-checkin-card] {
+  background: #ffffff !important;
+  border-color: var(--border) !important;
+}
+
+:root[data-theme="light"] .checkin-label,
+:root[data-theme="light"] [data-checkin-label] {
+  color: #54655d !important;
+}
+
+:root[data-theme="light"] .checkin-help,
+:root[data-theme="light"] [data-checkin-help] {
+  color: #73837b !important;
+}
+
+/* ---------- top pills / date badge ---------- */
+
+:root[data-theme="light"] .date-chip,
+:root[data-theme="light"] [data-date-chip] {
+  background: #f7faf8 !important;
+  color: #44554d !important;
+  border-color: #d4ddd6 !important;
+}
+
+/* ---------- footer ---------- */
+
+footer,
+.text-\[\#91b5a1\].text-\[10px\] {
+  color: var(--text-soft) !important;
+}
+
+/* ---------- gradients ---------- */
+
+.bg-gradient-to-br {
+  background-image: none !important;
+  background-color: var(--surface) !important;
 }

@@ -1,0 +1,76 @@
+/* DevTrack semantic palette for Settings, Reports, Check-ins, Activity.
+   Import this file AFTER index.css in src/main.tsx.
+   Colors are scoped by the existing data-theme attribute. */
+:root {
+  --dx-surface: #1c1f20;
+  --dx-raised: #232827;
+  --dx-input: #17191a;
+  --dx-border: #2b2f30;
+  --dx-border-strong: #39413d;
+  --dx-heading: #f0f2ee;
+  --dx-body: #c3ccc5;
+  --dx-muted: #929c95;
+  --dx-accent: #a7c9b4;
+  --dx-accent-hover: #bdd9c7;
+  --dx-accent-text: #aacbb6;
+  --dx-accent-contrast: #17231b;
+  --dx-accent-soft: #29332e;
+  --dx-selected: #29372f;
+  --dx-disabled: #333b38;
+  --dx-hover: #242829;
+  --dx-track: #343b38;
+  --dx-danger: #f1aaa5;
+  --dx-danger-border: #6b4848;
+  --dx-warning: #e6bc82;
+}
+:root[data-theme="light"] {
+  --dx-surface: #ffffff;
+  --dx-raised: #f4f7f5;
+  --dx-input: #ffffff;
+  --dx-border: #dce4de;
+  --dx-border-strong: #cbd8cf;
+  --dx-heading: #17251d;
+  --dx-body: #405449;
+  --dx-muted: #64766b;
+  --dx-accent: #427b59;
+  --dx-accent-hover: #356748;
+  --dx-accent-text: #32734d;
+  --dx-accent-contrast: #ffffff;
+  --dx-accent-soft: #eaf3ec;
+  --dx-selected: #e4f0e8;
+  --dx-disabled: #dae4dd;
+  --dx-hover: #f2f8f3;
+  --dx-track: #dfe8e1;
+  --dx-danger: #ad3e3e;
+  --dx-danger-border: #e1b7b7;
+  --dx-warning: #97602c;
+}
+/* Earlier prototype CSS used !important on inputs and labels.
+   Override that specifically for pages we have migrated. */
+:root[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+:root[data-theme="light"] textarea,
+:root[data-theme="light"] select {
+  background-color: var(--dx-input) !important;
+  color: var(--dx-heading) !important;
+  border-color: var(--dx-border-strong) !important;
+}
+:root[data-theme="light"] input::placeholder,
+:root[data-theme="light"] textarea::placeholder {
+  color: var(--dx-muted) !important;
+  opacity: 1;
+}
+:root[data-theme="light"] select option {
+  background-color: var(--dx-input) !important;
+  color: var(--dx-heading) !important;
+}
+:root[data-theme="light"] label {
+  color: var(--dx-body) !important;
+}
+/* Buttons, including the selected Appearance option, use readable contrast. */
+:root[data-theme="light"] button[aria-pressed="true"] {
+  border-color: var(--dx-accent);
+}
+/* Restore gradient-independent slider presentation, including with old global input rules. */
+input[type="range"] {
+  accent-color: var(--dx-accent);
+}
