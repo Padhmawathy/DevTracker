@@ -83,6 +83,122 @@ async fn desktop_api_request(
     Ok(ApiResponse { status, body })
 }
 
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
+/// Stop the collector cleanly, then exit. Used by the tray's Quit item.
+fn quit_app(app_handle: &tauri::AppHandle) {
+    log::info!("Quit requested");
+    let Some(backend) = app_handle.try_state::<BackendProcess>() else {
+        // In development, no managed sidecar exists.
+        app_handle.exit(0);
+        return;
+    };
+
+    if backend.terminated.load(Ordering::SeqCst) {
+        app_handle.exit(0);
+        return;
+    }
+
+    // Do not send the shutdown command multiple times.
+    if backend.shutdown_requested.swap(true, Ordering::SeqCst) {
+        log::warn!("Shutdown already requested; ignoring");
+        return;
+    }
+
+    log::info!("Requesting DevTrack backend shutdown");
+
+    match backend.child.lock() {
+        Ok(mut child) => {
+            if let Err(error) = child.write(b"shutdown\n") {
+                eprintln!("Failed to send shutdown command: {error}");
+            }
+        }
+        Err(error) => {
+            eprintln!("Cannot access backend process: {error}");
+        }
+    }
+
+    // Allow the collector time to flush activity.
+    // This is a fallback, not a forced backend kill.
+    let timeout_handle = app_handle.clone();
+
+    thread::spawn(move || {
+        thread::sleep(Duration::from_secs(15));
+
+        if let Some(backend) = timeout_handle.try_state::<BackendProcess>() {
+            if !backend.terminated.load(Ordering::SeqCst) {
+                log::error!("Backend did not terminate within 15 seconds");
+
+                timeout_handle.exit(1);
+            }
+        }
+    });
+}
+
+/// The first time the window is hidden, explain that tracking continues in the tray.
+fn notify_hidden_to_tray_once(app: &tauri::AppHandle) {
+    use tauri_plugin_notification::NotificationExt;
+
+    let Ok(data_dir) = app.path().app_data_dir() else {
+        return;
+    };
+    let flag = data_dir.join("tray_hint_shown");
+
+    if flag.exists() {
+        return;
+    }
+
+    let shown = app
+        .notification()
+        .builder()
+        .title("DevTrack is still tracking")
+        .body("Tracking continues in the background. To exit, click ^ next to the clock, right-click the DevTrack icon and choose Quit DevTrack.")
+        .show();
+
+    if shown.is_ok() {
+        let _ = std::fs::create_dir_all(&data_dir);
+        let _ = std::fs::write(&flag, b"1");
+    }
+}
+
+fn build_tray(app: &tauri::App) -> tauri::Result<()> {
+    use tauri::menu::{Menu, MenuItem};
+    use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+
+    let open = MenuItem::with_id(app, "open", "Open DevTrack", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit DevTrack", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&open, &quit])?;
+
+    let mut tray = TrayIconBuilder::with_id("main")
+        .tooltip("DevTrack - tracking activity")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                show_main_window(tray.app_handle());
+            }
+        });
+
+    if let Some(icon) = app.default_window_icon() {
+        tray = tray.icon(icon.clone());
+    }
+
+    tray.build(app)?;
+    log::info!("Tray icon created");
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -114,7 +230,28 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .invoke_handler(tauri::generate_handler![desktop_api_request])
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_notification::init())
+        // App-level handler: receives tray menu clicks on every platform.
+        .on_menu_event(|app, event| {
+            log::info!("App menu event: {}", event.id.as_ref());
+            match event.id.as_ref() {
+                "open" => show_main_window(app),
+                "quit" => quit_app(app),
+                _ => {}
+            }
+        })
         .setup(|app| {
+            // Log to stdout and %LOCALAPPDATA%\com.devtrack.desktop\logs in all builds.
+            app.handle().plugin(
+                tauri_plugin_log::Builder::default()
+                    .level(log::LevelFilter::Info)
+                    .build(),
+            )?;
+            log::info!("DevTrack desktop starting");
+
+            // Tracking keeps running in the tray after the window is closed.
+            build_tray(app)?;
+
             // Register devtrack:// with Windows during development only.
             // Installed builds must receive protocol registration from their package.
             #[cfg(all(debug_assertions, windows))]
@@ -124,12 +261,6 @@ pub fn run() {
             }
 
             if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-
                 // Development uses the separately started Python backend.
                 return Ok(());
             }
@@ -162,7 +293,7 @@ pub fn run() {
                             eprintln!("[Backend] {}", String::from_utf8_lossy(&bytes));
                         }
                         CommandEvent::Terminated(status) => {
-                            println!("Backend terminated: {status:?}");
+                            log::info!("Backend terminated: {status:?}");
 
                             if let Some(backend) = app_handle.try_state::<BackendProcess>() {
                                 backend.terminated.store(true, Ordering::SeqCst);
@@ -189,51 +320,19 @@ pub fn run() {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 let app_handle = window.app_handle();
 
-                let Some(backend) = app_handle.try_state::<BackendProcess>() else {
-                    // In development, no managed sidecar exists.
-                    return;
-                };
-
-                if backend.terminated.load(Ordering::SeqCst) {
-                    // Backend has already exited.
-                    return;
+                // While quitting from the tray, let the window close normally.
+                if let Some(backend) = app_handle.try_state::<BackendProcess>() {
+                    if backend.shutdown_requested.load(Ordering::SeqCst)
+                        || backend.terminated.load(Ordering::SeqCst)
+                    {
+                        return;
+                    }
                 }
 
+                // Closing the window only hides it; tracking continues in the tray.
                 api.prevent_close();
-
-                // Do not send the shutdown command multiple times.
-                if backend.shutdown_requested.swap(true, Ordering::SeqCst) {
-                    return;
-                }
-
-                println!("Requesting DevTrack backend shutdown...");
-
-                match backend.child.lock() {
-                    Ok(mut child) => {
-                        if let Err(error) = child.write(b"shutdown\n") {
-                            eprintln!("Failed to send shutdown command: {error}");
-                        }
-                    }
-                    Err(error) => {
-                        eprintln!("Cannot access backend process: {error}");
-                    }
-                }
-
-                // Allow the collector time to flush activity.
-                // This is a fallback, not a forced backend kill.
-                let timeout_handle = app_handle.clone();
-
-                thread::spawn(move || {
-                    thread::sleep(Duration::from_secs(15));
-
-                    if let Some(backend) = timeout_handle.try_state::<BackendProcess>() {
-                        if !backend.terminated.load(Ordering::SeqCst) {
-                            eprintln!("Backend did not terminate within 15 seconds.");
-
-                            timeout_handle.exit(1);
-                        }
-                    }
-                });
+                let _ = window.hide();
+                notify_hidden_to_tray_once(app_handle);
             }
         })
         .run(tauri::generate_context!())
