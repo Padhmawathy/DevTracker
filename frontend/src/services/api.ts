@@ -493,3 +493,52 @@ export function updateWorkEntry(
 export async function deleteWorkEntry(id: number): Promise<void> {
   await sendJson(`/api/work-entries/${id}/delete`, "POST", {}, "Failed to delete entry");
 }
+
+// ==========================================
+// TASKS
+// ==========================================
+
+export type TaskStatus = "todo" | "in_progress" | "done";
+export type TaskPriority = "none" | "low" | "medium" | "high";
+
+export interface Task {
+  id: number;
+  title: string;
+  notes: string | null;
+  due_date: string | null;
+  priority: TaskPriority;
+  status: TaskStatus;
+  job_id: number | null;
+  job_name: string | null;
+  job_color: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+}
+
+export interface TaskPayload {
+  title: string;
+  notes: string | null;
+  due_date: string | null;
+  priority: TaskPriority;
+  status: TaskStatus;
+  job_id: number | null;
+}
+
+export async function getTasks(): Promise<Task[]> {
+  const response = await apiFetch("/api/tasks");
+  if (!response.ok) throw await readError(response, "Failed to load tasks");
+  return (await response.json()).tasks;
+}
+
+export function createTask(payload: TaskPayload): Promise<Task> {
+  return sendJson("/api/tasks", "POST", payload, "Failed to create task");
+}
+
+export function updateTask(id: number, payload: TaskPayload): Promise<Task> {
+  return sendJson(`/api/tasks/${id}`, "PUT", payload, "Failed to save task");
+}
+
+export async function deleteTask(id: number): Promise<void> {
+  await sendJson(`/api/tasks/${id}/delete`, "POST", {}, "Failed to delete task");
+}

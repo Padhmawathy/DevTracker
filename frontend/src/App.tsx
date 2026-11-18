@@ -5,6 +5,7 @@ import { getCurrent } from "@tauri-apps/plugin-deep-link";
 import ActivityTimeline from "./pages/ActivityTimeline";
 import CheckIns from "./pages/CheckIns";
 import Calendar from "./pages/Calendar";
+import Tasks from "./pages/Tasks";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import { apiFetch, submitReminderAction, getDeveloperProfile, type DeveloperProfile } from "./services/api";
@@ -27,6 +28,11 @@ const PAGE_INFO: Record<
     title: "Overview",
     subtitle: "A clear picture of your development day.",
     eyebrow: "YOUR WORKSPACE",
+  },
+  tasks: {
+    title: "Tasks",
+    subtitle: "Plan, prioritise and finish your work.",
+    eyebrow: "TASKS",
   },
   activity: {
     title: "Activity timeline",
@@ -510,6 +516,7 @@ function getPageFromUrl(): Page {
 
   const validPages: Page[] = [
     "overview",
+    "tasks",
     "activity",
     "checkins",
     "calendar",
@@ -531,7 +538,7 @@ export default function App() {
   const [activePage, setActivePage] = useState<Page>(getPageFromUrl());
 
   const currentPage = PAGE_INFO[activePage];
-  const fitsWindow = activePage === "calendar";
+  const fitsWindow = activePage === "calendar" || activePage === "tasks";
 
   function navigate(page: Page) {
     setActivePage(page);
@@ -598,6 +605,8 @@ export default function App() {
         return <CheckIns />;
       case "calendar":
         return <Calendar />;
+      case "tasks":
+        return <Tasks />;
       case "reports":
         return <Reports />;
       case "settings":
