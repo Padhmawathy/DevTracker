@@ -348,109 +348,70 @@ export default function Tasks() {
     );
   }
 
+  const detailsOpen = !!selectedTask && !!draft;
+
   return (
-    <div className="cal flex flex-col gap-6 lg:h-full">
+    <div className="cal flex flex-col gap-4 lg:h-full">
       {error && (
-        <div role="alert" className="cal-card flex shrink-0 items-center gap-3 px-4 py-3 text-[13px]">
-          <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--dx-danger)]" />
+        <div role="alert" className="flex shrink-0 items-center gap-3 px-1 text-[13px] text-[var(--dx-danger)]">
           <span className="flex-1">{error}</span>
           <button type="button" className="cal-link-btn" onClick={() => setError("")}>Dismiss</button>
         </div>
       )}
 
-      <div className="grid gap-6 lg:min-h-0 lg:flex-1 lg:grid-cols-[220px_minmax(0,1fr)_320px]">
+      <div
+        className={[
+          "grid gap-6 lg:min-h-0 lg:flex-1",
+          detailsOpen
+            ? "lg:grid-cols-[200px_minmax(0,1fr)_320px]"
+            : "lg:grid-cols-[200px_minmax(0,1fr)]",
+        ].join(" ")}
+      >
         {/* ---------------- Lists ---------------- */}
-        <nav aria-label="Task lists" className="cal-card flex flex-col p-3 lg:min-h-0">
-          <div className="cal-scroll min-h-0 flex-1">
-            <div className="grid grid-cols-2 gap-2">
-              {SMART_LISTS.map((list) => {
-                const active = listKey === list.key;
-                return (
-                  <button
-                    key={list.key}
-                    type="button"
-                    onClick={() => chooseList(list.key)}
-                    aria-current={active ? "true" : undefined}
-                    className={[
-                      "flex flex-col gap-2 rounded-[12px] p-2.5 text-left transition-colors",
-                      active ? "text-white" : "bg-[var(--ui-fill)] hover:bg-[var(--ui-fill-strong)]",
-                    ].join(" ")}
-                    style={active ? { backgroundColor: list.color } : undefined}
-                  >
-                    <span className="flex items-center justify-between">
-                      <span
-                        className="flex h-[26px] w-[26px] items-center justify-center rounded-full"
-                        style={{ backgroundColor: active ? "rgba(255,255,255,0.25)" : list.color }}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d={list.icon} />
-                        </svg>
-                      </span>
-                      <span className="text-[18px] font-bold tabular-nums">
-                        {counts[list.key]}
-                      </span>
-                    </span>
-                    <span className={`text-[12px] font-semibold ${active ? "" : "text-[var(--ui-secondary)]"}`}>
-                      {list.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+        <nav aria-label="Task lists" className="cal-scroll flex gap-1 overflow-x-auto lg:min-h-0 lg:flex-col lg:overflow-x-hidden">
+          {SMART_LISTS.map((list) => (
+            <ListButton
+              key={list.key}
+              active={listKey === list.key}
+              onClick={() => chooseList(list.key)}
+              color={list.color}
+              icon={list.icon}
+              label={list.label}
+              count={counts[list.key]}
+            />
+          ))}
 
-            <p className="mb-1 mt-5 px-2 text-[11px] font-semibold text-[var(--ui-secondary)]">Jobs</p>
-            {activeJobs.length === 0 ? (
-              <p className="px-2 text-[12px] leading-relaxed text-[var(--ui-tertiary)]">
-                Jobs you add in Calendar appear here.
-              </p>
-            ) : (
-              <ul className="space-y-0.5">
-                {activeJobs.map((job) => {
-                  const key: ListKey = `job:${job.id}`;
-                  const active = listKey === key;
-                  return (
-                    <li key={job.id}>
-                      <button
-                        type="button"
-                        onClick={() => chooseList(key)}
-                        aria-current={active ? "true" : undefined}
-                        className={[
-                          "flex h-9 w-full items-center gap-2.5 rounded-[8px] px-2 text-left text-[13px] transition-colors",
-                          active ? "bg-[var(--ui-fill-strong)] font-medium" : "hover:bg-[var(--ui-fill)]",
-                        ].join(" ")}
-                      >
-                        <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: job.color }}>
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
-                            <path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" />
-                          </svg>
-                        </span>
-                        <span className="min-w-0 flex-1 truncate">{job.name}</span>
-                        <span className="text-[12px] tabular-nums text-[var(--ui-secondary)]">
-                          {counts.byJob.get(job.id) ?? 0}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
+          {activeJobs.length > 0 && (
+            <>
+              <p className="hidden px-2.5 pb-1 pt-5 text-[12px] font-medium text-[var(--ui-tertiary)] lg:block">Jobs</p>
+              <span className="mx-1 w-px shrink-0 self-stretch bg-[var(--ui-hairline)] lg:hidden" aria-hidden="true" />
+              {activeJobs.map((job) => (
+                <ListButton
+                  key={job.id}
+                  active={listKey === `job:${job.id}`}
+                  onClick={() => chooseList(`job:${job.id}`)}
+                  color={job.color}
+                  label={job.name}
+                  count={counts.byJob.get(job.id) ?? 0}
+                />
+              ))}
+            </>
+          )}
         </nav>
 
         {/* ---------------- Task list ---------------- */}
         <section className="cal-card flex min-h-[360px] flex-col p-4 lg:min-h-0">
-          <header className="flex shrink-0 items-baseline justify-between gap-3 px-2 pb-3">
-            <h2 className="text-[24px] font-bold tracking-[-0.025em]" style={{ color: listColor }}>
-              {listTitle}
-            </h2>
-            <span className="text-[24px] font-bold tabular-nums" style={{ color: listColor }}>
-              {visible.length}
-            </span>
+          <header className="flex shrink-0 items-baseline justify-between gap-3 px-2 pb-2">
+            <h2 className="text-[22px] font-bold tracking-[-0.025em]">{listTitle}</h2>
+            <span className="text-[15px] tabular-nums text-[var(--ui-tertiary)]">{visible.length}</span>
           </header>
 
           {listKey !== "completed" && (
-            <form onSubmit={handleQuickAdd} className="mb-2 flex shrink-0 items-center gap-3 rounded-[10px] px-3 py-2 focus-within:bg-[var(--ui-fill)]">
-              <span className="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full text-[16px] leading-none" style={{ color: listColor, boxShadow: `inset 0 0 0 1.5px ${listColor}` }} aria-hidden="true">
+            <form onSubmit={handleQuickAdd} className="mb-1 flex shrink-0 items-center gap-3 rounded-[10px] px-3 py-2 focus-within:bg-[var(--ui-fill)]">
+              <span
+                className="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full text-[15px] leading-none text-[var(--ui-tertiary)] shadow-[inset_0_0_0_1.5px_var(--ui-tertiary)]"
+                aria-hidden="true"
+              >
                 +
               </span>
               <input
@@ -471,13 +432,8 @@ export default function Tasks() {
               <p className="px-3 py-6 text-[13px] text-[var(--ui-tertiary)]">Loading…</p>
             ) : visible.length === 0 ? (
               <div className="flex h-full min-h-[160px] flex-col items-center justify-center text-center">
-                <p className="text-[15px] font-medium">
+                <p className="text-[14px] text-[var(--ui-tertiary)]">
                   {listKey === "completed" ? "No completed tasks" : "All clear"}
-                </p>
-                <p className="mt-1 text-[12px] text-[var(--ui-secondary)]">
-                  {listKey === "completed"
-                    ? "Tasks you complete will appear here."
-                    : "Type above and press Enter to add a task."}
                 </p>
               </div>
             ) : (
@@ -495,20 +451,22 @@ export default function Tasks() {
           </div>
         </section>
 
-        {/* ---------------- Details ---------------- */}
-        <aside className="cal-card flex flex-col p-5 lg:min-h-0">
-          {!selectedTask || !draft ? (
-            <div className="flex flex-1 flex-col items-center justify-center py-10 text-center">
-              <p className="text-[15px] font-medium">No task selected</p>
-              <p className="mt-1 max-w-[220px] text-[12px] text-[var(--ui-secondary)]">
-                Select a task to add notes, a due date, priority or a job.
-              </p>
-            </div>
-          ) : (
+        {/* ---------------- Details (only when a task is selected) ---------------- */}
+        {detailsOpen && selectedTask && draft && (
+          <aside className="cal-card flex flex-col p-5 lg:min-h-0">
             <form onSubmit={handleSave} className="flex min-h-0 flex-1 flex-col gap-4">
-              <div className="cal-scroll -mr-2 min-h-0 flex-1 space-y-4 pr-2">
-                <p className="cal-eyebrow">Details</p>
+              <div className="flex shrink-0 items-center justify-between">
+                <button type="button" className="cal-link-btn is-danger" onClick={() => void handleDelete()}>
+                  Delete
+                </button>
+                <button type="button" className="cal-icon-btn" onClick={() => selectTask(null)} aria-label="Close details">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+                    <path d="M6 6l12 12M18 6 6 18" />
+                  </svg>
+                </button>
+              </div>
 
+              <div className="cal-scroll -mr-2 min-h-0 flex-1 space-y-4 pr-2">
                 <div className="cal-group">
                   <label className="cal-row">
                     <span className="sr-only">Title</span>
@@ -523,7 +481,7 @@ export default function Tasks() {
                   <label className="cal-row !items-start">
                     <span className="sr-only">Notes</span>
                     <textarea
-                      rows={4}
+                      rows={3}
                       maxLength={4000}
                       value={draft.notes}
                       onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
@@ -550,61 +508,87 @@ export default function Tasks() {
                   </label>
                   <label className="cal-row">
                     <span className="cal-row-label">Job</span>
-                    <select
-                      value={draft.job_id}
-                      onChange={(e) => setDraft({ ...draft, job_id: e.target.value })}
-                      className="cal-field"
-                    >
+                    <select value={draft.job_id} onChange={(e) => setDraft({ ...draft, job_id: e.target.value })} className="cal-field">
                       <option value="">None</option>
                       {editorJobs.map((job) => (
                         <option key={job.id} value={job.id}>{job.name}</option>
                       ))}
                     </select>
                   </label>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="cal-caption">Priority</p>
-                  <div className="cal-segmented" role="group" aria-label="Priority">
-                    {PRIORITIES.map((p) => (
-                      <button key={p.value} type="button" aria-pressed={draft.priority === p.value} onClick={() => setDraft({ ...draft, priority: p.value })}>
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="cal-caption">Status</p>
-                  <div className="cal-segmented" role="group" aria-label="Status">
-                    {STATUSES.map((s) => (
-                      <button key={s.value} type="button" aria-pressed={draft.status === s.value} onClick={() => setDraft({ ...draft, status: s.value })}>
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
+                  <label className="cal-row">
+                    <span className="cal-row-label">Priority</span>
+                    <select
+                      value={draft.priority}
+                      onChange={(e) => setDraft({ ...draft, priority: e.target.value as TaskPriority })}
+                      className="cal-field"
+                    >
+                      {PRIORITIES.map((p) => (
+                        <option key={p.value} value={p.value}>{p.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="cal-row">
+                    <span className="cal-row-label">Status</span>
+                    <select
+                      value={draft.status}
+                      onChange={(e) => setDraft({ ...draft, status: e.target.value as TaskStatus })}
+                      className="cal-field"
+                    >
+                      {STATUSES.map((s) => (
+                        <option key={s.value} value={s.value}>{s.label}</option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
               </div>
 
-              <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[var(--ui-hairline)] pt-4">
-                <button type="button" className="cal-link-btn is-danger" onClick={() => void handleDelete()}>
-                  Delete
-                </button>
-                <div className="flex gap-2">
-                  {dirty && (
-                    <button type="button" className="cal-pill" onClick={() => setDraft(toDraft(selectedTask))}>
-                      Revert
-                    </button>
-                  )}
-                  <button type="submit" disabled={!dirty || saving} className="cal-pill cal-pill-primary">
+              {dirty && (
+                <div className="flex shrink-0 justify-end gap-2">
+                  <button type="button" className="cal-pill" onClick={() => setDraft(toDraft(selectedTask))}>
+                    Revert
+                  </button>
+                  <button type="submit" disabled={saving} className="cal-pill cal-pill-primary">
                     {saving ? "Saving…" : "Save"}
                   </button>
                 </div>
-              </div>
+              )}
             </form>
-          )}
-        </aside>
+          </aside>
+        )}
       </div>
     </div>
+  );
+}
+
+function ListButton({
+  active, onClick, color, icon, label, count,
+}: {
+  active: boolean;
+  onClick: () => void;
+  color: string;
+  icon?: string;
+  label: string;
+  count: number;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-current={active ? "true" : undefined}
+      className={[
+        "flex h-9 shrink-0 items-center gap-2.5 rounded-[8px] px-2.5 text-left text-[14px] transition-colors lg:w-full",
+        active ? "bg-[var(--ui-fill-strong)] font-medium text-[var(--dx-heading)]" : "text-[var(--dx-body)] hover:bg-[var(--ui-fill)]",
+      ].join(" ")}
+    >
+      {icon ? (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
+          <path d={icon} />
+        </svg>
+      ) : (
+        <span className="mx-[4px] h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+      )}
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {count > 0 && <span className="text-[12px] tabular-nums text-[var(--ui-tertiary)]">{count}</span>}
+    </button>
   );
 }
