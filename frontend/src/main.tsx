@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import { initializeTheme } from "./theme";
 import App from "./App.tsx";
+import MobileApp from "./MobileApp";
+import { IS_MOBILE } from "./lib/platform";
 import AppIcon from "./components/AppIcon";
 import {
   getTrackerSettings,
@@ -152,6 +154,6 @@ function DevTrackStartup() {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <DevTrackStartup />
+    {IS_MOBILE ? <MobileApp /> : <DevTrackStartup />}
   </StrictMode>
 );
