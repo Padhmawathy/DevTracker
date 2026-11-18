@@ -368,3 +368,128 @@ export async function submitReminderAction(
     );
   }
 }
+// ==========================================
+// JOBS & CALENDAR WORK LOG
+// ==========================================
+
+export type JobStatus = "active" | "archived";
+export type WorkEntryStatus = "planned" | "done";
+export type Platform = "linkedin" | "instagram" | "reddit" | "x" | "other";
+
+export const PLATFORM_LABELS: Record<Platform, string> = {
+  linkedin: "LinkedIn",
+  instagram: "Instagram",
+  reddit: "Reddit",
+  x: "X",
+  other: "Other",
+};
+
+export interface Job {
+  id: number;
+  name: string;
+  client: string | null;
+  color: string;
+  status: JobStatus;
+  created_at: string;
+  done_hours: number;
+  planned_hours: number;
+  entry_count: number;
+  post_count: number;
+  last_entry_date: string | null;
+}
+
+export interface JobPayload {
+  name: string;
+  client: string | null;
+  color: string;
+  status: JobStatus;
+}
+
+export interface WorkEntry {
+  id: number;
+  job_id: number;
+  job_name: string;
+  job_color: string;
+  entry_date: string;
+  hours: number | null;
+  description: string;
+  status: WorkEntryStatus;
+  platform: Platform | null;
+  link: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkEntryPayload {
+  job_id: number;
+  entry_date: string;
+  hours: number | null;
+  description: string;
+  status: WorkEntryStatus;
+  platform: Platform | null;
+  link: string | null;
+}
+
+async function readError(response: Response, fallback: string): Promise<Error> {
+  try {
+    const data = await response.json();
+    if (typeof data?.detail === "string") return new Error(data.detail);
+  } catch {
+    // ignore non-JSON bodies
+  }
+  return new Error(`${fallback} (${response.status})`);
+}
+
+async function sendJson<T>(
+  path: string,
+  method: "POST" | "PUT",
+  body: unknown,
+  fallback: string
+): Promise<T> {
+  const response = await apiFetch(path, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+  });
+  if (!response.ok) throw await readError(response, fallback);
+  return response.json();
+}
+
+export async function getJobs(): Promise<Job[]> {
+  const response = await apiFetch("/api/jobs");
+  if (!response.ok) throw await readError(response, "Failed to load jobs");
+  return (await response.json()).jobs;
+}
+
+export function createJob(payload: JobPayload): Promise<Job> {
+  return sendJson("/api/jobs", "POST", payload, "Failed to create job");
+}
+
+export function updateJob(id: number, payload: JobPayload): Promise<Job> {
+  return sendJson(`/api/jobs/${id}`, "PUT", payload, "Failed to update job");
+}
+
+export async function getWorkEntries(
+  start: string,
+  end: string
+): Promise<WorkEntry[]> {
+  const params = new URLSearchParams({ start, end });
+  const response = await apiFetch(`/api/work-entries?${params}`);
+  if (!response.ok) throw await readError(response, "Failed to load entries");
+  return (await response.json()).entries;
+}
+
+export function createWorkEntry(payload: WorkEntryPayload): Promise<WorkEntry> {
+  return sendJson("/api/work-entries", "POST", payload, "Failed to save entry");
+}
+
+export function updateWorkEntry(
+  id: number,
+  payload: WorkEntryPayload
+): Promise<WorkEntry> {
+  return sendJson(`/api/work-entries/${id}`, "PUT", payload, "Failed to save entry");
+}
+
+export async function deleteWorkEntry(id: number): Promise<void> {
+  await sendJson(`/api/work-entries/${id}/delete`, "POST", {}, "Failed to delete entry");
+}

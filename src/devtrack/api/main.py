@@ -24,6 +24,13 @@ from devtrack.storage.settings_store import JSONSettingsStore
 from devtrack.models.app_category import AppCategoryRule
 from devtrack.storage.app_category_store import JSONAppCategoryStore
 from devtrack.reminders.action_queue import ReminderActionQueue
+from devtrack.storage.job_store import (
+    DuplicateJobError,
+    JobNotFoundError,
+    SQLiteJobStore,
+    WorkEntryNotFoundError,
+)
+from typing import Literal
 
 app = FastAPI(
     title="DevTracker API",
@@ -401,6 +408,119 @@ def update_app_categories(payload: AppCategoriesRequest):
             for rule in rules
         ]
     }
+
+# ------------------------------------------
+# Jobs and calendar work entries
+# ------------------------------------------
+
+MAX_CALENDAR_RANGE_DAYS = 400
+
+
+class JobRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    client: str | None = Field(default=None, max_length=100)
+    color: str = Field(default="#4f9d7a", pattern=r"^#[0-9a-fA-F]{6}$")
+    status: Literal["active", "archived"] = "active"
+
+
+class WorkEntryRequest(BaseModel):
+    job_id: int
+    entry_date: date
+    hours: float | None = Field(default=None, gt=0, le=24)
+    description: str = Field(min_length=1, max_length=2000)
+    status: Literal["planned", "done"] = "done"
+    platform: Literal["linkedin", "instagram", "reddit", "x", "other"] | None = None
+    link: str | None = Field(default=None, max_length=2000)
+
+
+def _job_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, JobNotFoundError):
+        return HTTPException(status_code=404, detail="Job not found.")
+    if isinstance(exc, WorkEntryNotFoundError):
+        return HTTPException(status_code=404, detail="Work entry not found.")
+    if isinstance(exc, DuplicateJobError):
+        return HTTPException(status_code=409, detail=str(exc))
+    return HTTPException(status_code=422, detail=str(exc))
+
+
+@app.get("/api/jobs")
+def list_jobs(include_archived: bool = True):
+    jobs = SQLiteJobStore().list_jobs(include_archived=include_archived)
+    return {"jobs": jobs}
+
+
+@app.post("/api/jobs", status_code=201)
+def create_job(payload: JobRequest):
+    try:
+        return SQLiteJobStore().create_job(**payload.model_dump())
+    except (ValueError, LookupError) as exc:
+        raise _job_error(exc) from exc
+
+
+@app.put("/api/jobs/{job_id}")
+def update_job(job_id: int, payload: JobRequest):
+    try:
+        return SQLiteJobStore().update_job(job_id, **payload.model_dump())
+    except (ValueError, LookupError) as exc:
+        raise _job_error(exc) from exc
+
+
+@app.get("/api/work-entries")
+def list_work_entries(start: str, end: str, job_id: int | None = None):
+    try:
+        start_day = date.fromisoformat(start)
+        end_day = date.fromisoformat(end)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid date. Use YYYY-MM-DD.",
+        )
+
+    if end_day < start_day:
+        raise HTTPException(
+            status_code=400,
+            detail="End date must be on or after start date.",
+        )
+
+    if (end_day - start_day).days > MAX_CALENDAR_RANGE_DAYS:
+        raise HTTPException(
+            status_code=400,
+            detail="Date range is too large.",
+        )
+
+    entries = SQLiteJobStore().list_entries(start_day, end_day, job_id)
+    return {
+        "start": start_day.isoformat(),
+        "end": end_day.isoformat(),
+        "entries": entries,
+    }
+
+
+@app.post("/api/work-entries", status_code=201)
+def create_work_entry(payload: WorkEntryRequest):
+    try:
+        return SQLiteJobStore().create_entry(**payload.model_dump())
+    except (ValueError, LookupError) as exc:
+        raise _job_error(exc) from exc
+
+
+@app.put("/api/work-entries/{entry_id}")
+def update_work_entry(entry_id: int, payload: WorkEntryRequest):
+    try:
+        return SQLiteJobStore().update_entry(entry_id, **payload.model_dump())
+    except (ValueError, LookupError) as exc:
+        raise _job_error(exc) from exc
+
+
+# The desktop proxy only forwards GET/POST/PUT, so deletion is a POST.
+@app.post("/api/work-entries/{entry_id}/delete")
+def delete_work_entry(entry_id: int):
+    try:
+        SQLiteJobStore().delete_entry(entry_id)
+    except LookupError as exc:
+        raise _job_error(exc) from exc
+    return {"status": "deleted", "id": entry_id}
+
 
 # ------------------------------------------
 # Serve DevTracker React production frontend
