@@ -14,6 +14,7 @@ import {
   type WorkEntryPayload,
   type WorkEntryStatus,
 } from "../services/api";
+import JobMark from "../components/JobMark";
 import "./calendar.css";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -23,6 +24,32 @@ const JOB_COLORS = [
   "#0a84ff", "#30d158", "#ff9f0a", "#bf5af2",
   "#ff375f", "#40c8e0", "#ffd60a", "#8e8e93",
 ];
+const JOB_EMOJIS = [
+  "🐱", "🐶", "🐰", "🦊", "🐼", "🐨", "🐸", "🐥", "🦄", "🐝", "🦋", "🐙",
+  "🌸", "🌷", "🌻", "🍀", "🌈", "⭐", "✨", "🌙", "🍓", "🍑", "🍩", "🧁",
+  "☕", "🎀", "💖", "💜", "🎨", "📸", "✏️", "📚", "💼", "🚀", "🎧", "🎮",
+];
+
+function EmojiGrid({ value, onPick }: { value: string | null; onPick: (emoji: string) => void }) {
+  return (
+    <div className="grid grid-cols-9 gap-0.5" role="group" aria-label="Emoji">
+      {JOB_EMOJIS.map((e) => (
+        <button
+          key={e}
+          type="button"
+          onClick={() => onPick(e)}
+          aria-label={`Emoji ${e}`}
+          aria-pressed={value === e}
+          className={`flex aspect-square items-center justify-center rounded-[8px] text-[18px] leading-none transition-transform hover:scale-110 ${
+            value === e ? "bg-[var(--dx-accent-soft)] shadow-[inset_0_0_0_1.5px_var(--dx-accent)]" : "hover:bg-[var(--ui-fill)]"
+          }`}
+        >
+          {e}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function toIso(d: Date): string {
   const y = d.getFullYear();
@@ -93,6 +120,9 @@ export default function Calendar() {
   const [jobName, setJobName] = useState("");
   const [jobClient, setJobClient] = useState("");
   const [jobColor, setJobColor] = useState(JOB_COLORS[0]);
+  const [jobMarkMode, setJobMarkMode] = useState<"color" | "emoji">("emoji");
+  const [jobEmoji, setJobEmoji] = useState<string>(JOB_EMOJIS[0]);
+  const [markPickerFor, setMarkPickerFor] = useState<number | null>(null);
 
   const grid = useMemo(() => buildMonthGrid(cursor.year, cursor.month), [cursor]);
   const rangeStart = toIso(grid[0]);
@@ -266,6 +296,7 @@ export default function Calendar() {
         name: jobName.trim(),
         client: jobClient.trim() || null,
         color: jobColor,
+        emoji: jobMarkMode === "emoji" ? jobEmoji : null,
         status: "active",
       });
       setJobName("");
@@ -284,12 +315,30 @@ export default function Calendar() {
         name: job.name,
         client: job.client,
         color: job.color,
+        emoji: job.emoji,
         status: job.status === "active" ? "archived" : "active",
       });
       if (jobFilter === job.id) setJobFilter("all");
       if (form.job_id === String(job.id) && editingId === null) {
         setForm((f) => ({ ...f, job_id: "" }));
       }
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function changeJobMark(job: Job, mark: { emoji: string | null; color?: string }) {
+    setError("");
+    try {
+      await updateJob(job.id, {
+        name: job.name,
+        client: job.client,
+        color: mark.color ?? job.color,
+        emoji: mark.emoji,
+        status: job.status,
+      });
+      setMarkPickerFor(null);
       setRefreshKey((k) => k + 1);
     } catch (err) {
       setError((err as Error).message);
@@ -365,7 +414,7 @@ export default function Calendar() {
                 onClick={() => setJobFilter(jobFilter === job.id ? "all" : job.id)}
                 className={`${chip} ${jobFilter === job.id ? chipOn : chipOff}`}
               >
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: job.color }} />
+                <JobMark color={job.color} emoji={job.emoji} size="sm" />
                 {job.name}
               </button>
             ))}
@@ -413,7 +462,7 @@ export default function Calendar() {
                   {/* Dots on phones, titled events on wider screens */}
                   <span className="flex flex-wrap gap-[3px] px-1 sm:hidden">
                     {items.slice(0, 4).map((e) => (
-                      <span key={e.id} className="cal-event-dot" style={{ backgroundColor: e.job_color, opacity: e.status === "planned" ? 0.4 : 1 }} />
+                      <JobMark key={e.id} color={e.job_color} emoji={e.job_emoji} size="xs" dim={e.status === "planned"} />
                     ))}
                   </span>
                   <span className="hidden min-w-0 flex-col gap-[3px] sm:flex">
@@ -423,7 +472,11 @@ export default function Calendar() {
                         className={`cal-event ${e.status === "planned" ? "is-planned" : ""}`}
                         title={`${e.job_name}: ${e.description}`}
                       >
-                        <span className="cal-event-dot" style={{ backgroundColor: e.job_color, color: e.job_color }} />
+                        {e.job_emoji ? (
+                          <JobMark emoji={e.job_emoji} size="xs" />
+                        ) : (
+                          <span className="cal-event-dot" style={{ backgroundColor: e.job_color, color: e.job_color }} />
+                        )}
                         <span className="truncate">{e.platform ? PLATFORM_LABELS[e.platform] : e.job_name}</span>
                       </span>
                     ))}
@@ -450,8 +503,16 @@ export default function Calendar() {
                 {jobs.length > 0 && (
                   <ul className="cal-group">
                     {jobs.map((job) => (
-                      <li key={job.id} className="cal-row py-2.5">
-                        <span className="cal-event-dot !h-2.5 !w-2.5" style={{ backgroundColor: job.color, opacity: job.status === "archived" ? 0.35 : 1 }} />
+                      <li key={job.id} className="cal-row flex-wrap py-2.5">
+                        <button
+                          type="button"
+                          onClick={() => setMarkPickerFor(markPickerFor === job.id ? null : job.id)}
+                          aria-label={`Change icon for ${job.name}`}
+                          aria-expanded={markPickerFor === job.id}
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full hover:bg-[var(--ui-fill)]"
+                        >
+                          <JobMark color={job.color} emoji={job.emoji} size="md" dim={job.status === "archived"} />
+                        </button>
                         <div className="min-w-0 flex-1">
                           <p className={`truncate text-[14px] ${job.status === "archived" ? "text-[var(--cal-tertiary)]" : ""}`}>{job.name}</p>
                           <p className="truncate text-[12px] text-[var(--cal-secondary)]">
@@ -465,6 +526,28 @@ export default function Calendar() {
                         <button type="button" className="cal-link-btn" onClick={() => void toggleArchive(job)}>
                           {job.status === "active" ? "Archive" : "Restore"}
                         </button>
+                        {markPickerFor === job.id && (
+                          <div className="basis-full space-y-2 pb-1 pt-2">
+                            <EmojiGrid value={job.emoji} onPick={(emoji) => void changeJobMark(job, { emoji })} />
+                            <div className="flex flex-wrap items-center gap-2 pt-1">
+                              <span className="text-[12px] text-[var(--cal-secondary)]">Or a color</span>
+                              {JOB_COLORS.map((c) => (
+                                <button
+                                  key={c}
+                                  type="button"
+                                  onClick={() => void changeJobMark(job, { emoji: null, color: c })}
+                                  aria-label={`Color ${c}`}
+                                  aria-pressed={!job.emoji && job.color === c}
+                                  className="h-[18px] w-[18px] rounded-full transition-transform hover:scale-110"
+                                  style={{
+                                    backgroundColor: c,
+                                    boxShadow: !job.emoji && job.color === c ? `0 0 0 2px var(--dx-surface), 0 0 0 4px ${c}` : undefined,
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -482,8 +565,14 @@ export default function Calendar() {
                       <input maxLength={100} value={jobClient} onChange={(e) => setJobClient(e.target.value)} placeholder="Optional" className="cal-field" />
                     </label>
                   </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex flex-wrap gap-2" role="group" aria-label="Color">
+                  <div className="cal-segmented" role="group" aria-label="Job icon">
+                    <button type="button" aria-pressed={jobMarkMode === "emoji"} onClick={() => setJobMarkMode("emoji")}>Emoji</button>
+                    <button type="button" aria-pressed={jobMarkMode === "color"} onClick={() => setJobMarkMode("color")}>Color</button>
+                  </div>
+                  {jobMarkMode === "emoji" ? (
+                    <EmojiGrid value={jobEmoji} onPick={setJobEmoji} />
+                  ) : (
+                    <div className="flex flex-wrap gap-2.5 py-1" role="group" aria-label="Color">
                       {JOB_COLORS.map((c) => (
                         <button
                           key={c}
@@ -491,7 +580,7 @@ export default function Calendar() {
                           onClick={() => setJobColor(c)}
                           aria-label={`Color ${c}`}
                           aria-pressed={jobColor === c}
-                          className="h-[20px] w-[20px] rounded-full transition-transform hover:scale-110"
+                          className="h-[22px] w-[22px] rounded-full transition-transform hover:scale-110"
                           style={{
                             backgroundColor: c,
                             boxShadow: jobColor === c ? `0 0 0 2px var(--dx-surface), 0 0 0 4px ${c}` : undefined,
@@ -499,6 +588,12 @@ export default function Calendar() {
                         />
                       ))}
                     </div>
+                  )}
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex min-w-0 items-center gap-2 text-[13px] text-[var(--cal-secondary)]">
+                      <JobMark color={jobColor} emoji={jobMarkMode === "emoji" ? jobEmoji : null} size="md" />
+                      <span className="truncate">{jobName.trim() || "Preview"}</span>
+                    </span>
                     <button type="submit" disabled={!jobName.trim()} className="cal-pill cal-pill-primary">Add</button>
                   </div>
                 </form>
@@ -543,7 +638,7 @@ export default function Calendar() {
                             <p className="whitespace-pre-wrap break-words text-[14px] leading-snug">{e.description}</p>
                             <p className="mt-1 text-[12px] text-[var(--cal-secondary)]">
                               {[
-                                e.job_name,
+                                e.job_emoji ? `${e.job_emoji} ${e.job_name}` : e.job_name,
                                 e.platform ? PLATFORM_LABELS[e.platform] : null,
                                 e.hours != null ? formatHours(e.hours) : null,
                                 e.status === "planned" ? "Planned" : null,

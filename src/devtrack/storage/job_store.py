@@ -10,6 +10,9 @@ JOB_STATUSES = ("active", "archived")
 ENTRY_STATUSES = ("planned", "done")
 PLATFORMS = ("linkedin", "instagram", "reddit", "x", "other")
 COLOR_PATTERN = re.compile(r"^#[0-9a-fA-F]{6}$")
+# An emoji (incl. ZWJ sequences / skin tones); no letters, digits or spaces.
+MAX_EMOJI_LENGTH = 16
+EMOJI_FORBIDDEN = re.compile(r"[\sA-Za-z0-9<>&\"']")
 
 
 class JobNotFoundError(LookupError):
@@ -81,13 +84,26 @@ class SQLiteJobStore:
                 ON work_entries(entry_date)
                 """
             )
+            # v0.1.8: optional emoji shown instead of the colour dot.
+            columns = {
+                row["name"]
+                for row in connection.execute("PRAGMA table_info(jobs)")
+            }
+            if "emoji" not in columns:
+                connection.execute("ALTER TABLE jobs ADD COLUMN emoji TEXT")
 
     # ---------------- validation ----------------
 
     @staticmethod
-    def _validate_job(name, color, status):
+    def _validate_job(name, color, status, emoji=None):
         if not name or not name.strip():
             raise ValueError("Job name is required.")
+        if emoji is not None and (
+            not emoji.strip()
+            or len(emoji) > MAX_EMOJI_LENGTH
+            or EMOJI_FORBIDDEN.search(emoji)
+        ):
+            raise ValueError("Emoji must be a single emoji.")
         if not COLOR_PATTERN.match(color or ""):
             raise ValueError("Color must be a hex value like #4f9d7a.")
         if status not in JOB_STATUSES:
@@ -138,19 +154,21 @@ class SQLiteJobStore:
                 return job
         raise JobNotFoundError(job_id)
 
-    def create_job(self, name, color, client=None, status="active"):
-        self._validate_job(name, color, status)
+    def create_job(self, name, color, client=None, status="active", emoji=None):
+        emoji = (emoji or "").strip() or None
+        self._validate_job(name, color, status, emoji)
         try:
             with self._connect() as connection:
                 cursor = connection.execute(
                     """
-                    INSERT INTO jobs (name, client, color, status, created_at)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO jobs (name, client, color, emoji, status, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     """,
                     (
                         name.strip(),
                         (client or "").strip() or None,
                         color.lower(),
+                        emoji,
                         status,
                         datetime.now().isoformat(),
                     ),
@@ -161,20 +179,24 @@ class SQLiteJobStore:
             ) from exc
         return self.get_job(cursor.lastrowid)
 
-    def update_job(self, job_id, name, color, client=None, status="active"):
-        self._validate_job(name, color, status)
+    def update_job(
+        self, job_id, name, color, client=None, status="active", emoji=None
+    ):
+        emoji = (emoji or "").strip() or None
+        self._validate_job(name, color, status, emoji)
         try:
             with self._connect() as connection:
                 cursor = connection.execute(
                     """
                     UPDATE jobs
-                    SET name = ?, client = ?, color = ?, status = ?
+                    SET name = ?, client = ?, color = ?, emoji = ?, status = ?
                     WHERE id = ?
                     """,
                     (
                         name.strip(),
                         (client or "").strip() or None,
                         color.lower(),
+                        emoji,
                         status,
                         job_id,
                     ),
@@ -191,7 +213,8 @@ class SQLiteJobStore:
 
     def list_entries(self, start, end, job_id=None):
         query = """
-            SELECT work_entries.*, jobs.name AS job_name, jobs.color AS job_color
+            SELECT work_entries.*, jobs.name AS job_name, jobs.color AS job_color,
+                   jobs.emoji AS job_emoji
             FROM work_entries
             JOIN jobs ON jobs.id = work_entries.job_id
             WHERE work_entries.entry_date >= ? AND work_entries.entry_date <= ?
@@ -211,7 +234,7 @@ class SQLiteJobStore:
             row = connection.execute(
                 """
                 SELECT work_entries.*, jobs.name AS job_name,
-                       jobs.color AS job_color
+                       jobs.color AS job_color, jobs.emoji AS job_emoji
                 FROM work_entries
                 JOIN jobs ON jobs.id = work_entries.job_id
                 WHERE work_entries.id = ?
@@ -310,6 +333,7 @@ class SQLiteJobStore:
             "name": row["name"],
             "client": row["client"],
             "color": row["color"],
+            "emoji": row["emoji"],
             "status": row["status"],
             "created_at": row["created_at"],
             "done_hours": round(row["done_hours"], 2),
@@ -326,6 +350,7 @@ class SQLiteJobStore:
             "job_id": row["job_id"],
             "job_name": row["job_name"],
             "job_color": row["job_color"],
+            "job_emoji": row["job_emoji"],
             "entry_date": row["entry_date"],
             "hours": row["hours"],
             "description": row["description"],

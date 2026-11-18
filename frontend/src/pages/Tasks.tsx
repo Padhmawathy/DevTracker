@@ -11,6 +11,7 @@ import {
   type TaskPriority,
   type TaskStatus,
 } from "../services/api";
+import JobMark from "../components/JobMark";
 import "./calendar.css";
 
 type SmartList = "today" | "scheduled" | "all" | "completed";
@@ -335,7 +336,7 @@ export default function Tasks() {
                 )}
                 {task.job_name && (
                   <span className="inline-flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: task.job_color ?? undefined }} />
+                    <JobMark color={task.job_color} emoji={task.job_emoji} size="xs" />
                     {task.job_name}
                   </span>
                 )}
@@ -391,6 +392,7 @@ export default function Tasks() {
                   active={listKey === `job:${job.id}`}
                   onClick={() => chooseList(`job:${job.id}`)}
                   color={job.color}
+                  emoji={job.emoji}
                   label={job.name}
                   count={counts.byJob.get(job.id) ?? 0}
                 />
@@ -561,11 +563,12 @@ export default function Tasks() {
 }
 
 function ListButton({
-  active, onClick, color, icon, label, count,
+  active, onClick, color, emoji, icon, label, count,
 }: {
   active: boolean;
   onClick: () => void;
   color: string;
+  emoji?: string | null;
   icon?: string;
   label: string;
   count: number;
@@ -585,7 +588,9 @@ function ListButton({
           <path d={icon} />
         </svg>
       ) : (
-        <span className="mx-[4px] h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+        <span className="flex w-4 shrink-0 justify-center">
+          <JobMark color={color} emoji={emoji} size="sm" />
+        </span>
       )}
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {count > 0 && <span className="text-[12px] tabular-nums text-[var(--ui-tertiary)]">{count}</span>}

@@ -1,6 +1,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import TopNav, { type Page } from "./components/TopNav";
+import JobMark from "./components/JobMark";
 import { getCurrent } from "@tauri-apps/plugin-deep-link";
 import ActivityTimeline from "./pages/ActivityTimeline";
 import CheckIns from "./pages/CheckIns";
@@ -278,7 +279,7 @@ function Overview({
                       <span className="shrink-0 text-[12px] text-[var(--dx-danger)]">Overdue</span>
                     ) : task.job_name ? (
                       <span className="flex shrink-0 items-center gap-1.5 text-[12px] text-[var(--ui-secondary)]">
-                        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: task.job_color ?? undefined }} />
+                        <JobMark color={task.job_color} emoji={task.job_emoji} size="xs" />
                         {task.job_name}
                       </span>
                     ) : null}
