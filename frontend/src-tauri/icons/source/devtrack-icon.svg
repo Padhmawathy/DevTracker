@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- DevTrack app icon (master). Segmented progress ring with a tick on graphite.
+       Ring: r=270 (circumference ~1696.5), stroke 92 with round caps.
+       Dash gap 162 = 70 visible gap + 92 for the two round caps. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a3a3e"/>
+      <stop offset="1" stop-color="#151517"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.14"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="230" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="230" fill="url(#sheen)"/>
+  <g fill="none" stroke-width="92" stroke-linecap="round" transform="rotate(-90 512 512)">
+    <circle cx="512" cy="512" r="270" stroke="#0a84ff" stroke-dasharray="520 1177" stroke-dashoffset="0"/>
+    <circle cx="512" cy="512" r="270" stroke="#30d158" stroke-dasharray="410 1287" stroke-dashoffset="-682"/>
+    <circle cx="512" cy="512" r="270" stroke="#ff9f0a" stroke-dasharray="280 1417" stroke-dashoffset="-1254"/>
+  </g>
+  <path d="M410 520l72 72 140-152" fill="none" stroke="#ffffff" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
