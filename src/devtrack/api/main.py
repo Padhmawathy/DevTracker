@@ -36,7 +36,7 @@ app.add_middleware(
     allow_origins=["http://tauri.localhost"],
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "X-DevTrack-Token"],
 )
 
 
