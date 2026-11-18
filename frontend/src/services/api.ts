@@ -389,6 +389,7 @@ export interface Job {
   name: string;
   client: string | null;
   color: string;
+  emoji: string | null;
   status: JobStatus;
   created_at: string;
   done_hours: number;
@@ -402,6 +403,7 @@ export interface JobPayload {
   name: string;
   client: string | null;
   color: string;
+  emoji: string | null;
   status: JobStatus;
 }
 
@@ -410,6 +412,7 @@ export interface WorkEntry {
   job_id: number;
   job_name: string;
   job_color: string;
+  job_emoji: string | null;
   entry_date: string;
   hours: number | null;
   description: string;
@@ -511,6 +514,7 @@ export interface Task {
   job_id: number | null;
   job_name: string | null;
   job_color: string | null;
+  job_emoji: string | null;
   created_at: string;
   updated_at: string;
   completed_at: string | null;

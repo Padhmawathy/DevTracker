@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import { initializeTheme } from "./theme";
 import App from "./App.tsx";
+import AppIcon from "./components/AppIcon";
 import {
   getTrackerSettings,
   updateTrackerSettings,
@@ -113,9 +114,7 @@ function DevTrackStartup() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[var(--ui-page)] px-5 py-10 text-[var(--dx-heading)]">
       <section className="ui-card w-full max-w-[480px] p-8 text-center sm:p-10">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[14px] bg-gradient-to-b from-[#3b9cff] to-[#0062d1] text-[22px] font-semibold text-white shadow-[0_6px_16px_rgba(0,113,227,0.35)]">
-          D
-        </div>
+        <AppIcon size={64} className="mx-auto drop-shadow-[0_8px_18px_rgba(0,0,0,0.3)]" />
         <h1 className="mt-6 text-[28px] font-bold tracking-[-0.025em]">Welcome to DevTrack</h1>
         <p className="mt-3 text-[15px] leading-relaxed text-[var(--ui-secondary)]">
           DevTrack can record which apps you use and for how long. If window-title

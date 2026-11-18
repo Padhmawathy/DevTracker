@@ -421,6 +421,7 @@ class JobRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     client: str | None = Field(default=None, max_length=100)
     color: str = Field(default="#4f9d7a", pattern=r"^#[0-9a-fA-F]{6}$")
+    emoji: str | None = Field(default=None, max_length=16)
     status: Literal["active", "archived"] = "active"
 
 

@@ -1,18 +1,15 @@
-
 import { useEffect, useState, type FormEvent } from "react";
-import {
-  createCheckIn,
-  getDailyCheckIns,
-  type DeveloperCheckIn,
-} from "../services/api";
+import DateNav from "../components/DateNav";
+import { todayIso } from "../lib/dates";
+import { createCheckIn, getDailyCheckIns, type DeveloperCheckIn } from "../services/api";
+import "./calendar.css";
 
-function getLocalDate(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
+const CATEGORIES = ["Coding", "Debugging", "Testing", "Research", "Other"];
 
-  return `${year}-${month}-${day}`;
+function timeLabel(createdAt: string): string {
+  const d = new Date(createdAt);
+  if (Number.isNaN(d.getTime())) return createdAt.slice(11, 16);
+  return new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit" }).format(d);
 }
 
 export default function CheckIns() {
@@ -20,60 +17,54 @@ export default function CheckIns() {
   const [workDescription, setWorkDescription] = useState("");
   const [category, setCategory] = useState("Coding");
   const [blocker, setBlocker] = useState("");
+  const [showBlocker, setShowBlocker] = useState(false);
 
-  const [selectedDate, setSelectedDate] = useState(getLocalDate());
+  const [selectedDate, setSelectedDate] = useState(todayIso());
   const [checkins, setCheckins] = useState<DeveloperCheckIn[]>([]);
+  const [recentProjects, setRecentProjects] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadCheckIns() {
+    async function load() {
       setLoading(true);
       setError("");
-      setCheckins([]);
-
       try {
         const result = await getDailyCheckIns(selectedDate);
-
-        if (!cancelled) {
-          setCheckins(result.checkins);
-        }
+        if (cancelled) return;
+        setCheckins(result.checkins);
+        setRecentProjects((current) =>
+          Array.from(new Set([...result.checkins.map((c) => c.project_name), ...current])).slice(0, 12)
+        );
       } catch {
         if (!cancelled) {
+          setCheckins([]);
           setError("Unable to load check-ins.");
         }
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
 
-    void loadCheckIns();
-
+    void load();
     return () => {
       cancelled = true;
     };
   }, [selectedDate, refreshKey]);
 
+  const canSave = projectName.trim() !== "" && workDescription.trim() !== "" && !saving;
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    if (!projectName.trim() || !workDescription.trim()) {
-      setError("Project name and work description are required.");
-      return;
-    }
+    if (!canSave) return;
 
     setSaving(true);
     setError("");
-    setSuccess("");
-
     try {
       await createCheckIn({
         project_name: projectName.trim(),
@@ -81,200 +72,139 @@ export default function CheckIns() {
         category,
         blocker: blocker.trim() || null,
       });
-
-      setProjectName("");
       setWorkDescription("");
       setBlocker("");
-
-      setSuccess("Check-in saved successfully!");
-
-      const today = getLocalDate();
-
-      if (selectedDate !== today) {
-        setSelectedDate(today);
-      } else {
-        setRefreshKey((current) => current + 1);
-      }
+      setShowBlocker(false);
+      // Keep the project name: consecutive check-ins are usually for the same project.
+      if (selectedDate !== todayIso()) setSelectedDate(todayIso());
+      else setRefreshKey((k) => k + 1);
     } catch {
-      setError("Failed to save check-in. Please try again.");
+      setError("Couldn’t save the check-in. Please try again.");
     } finally {
       setSaving(false);
     }
   }
 
+  const isToday = selectedDate === todayIso();
+
   return (
-    <div className="grid items-start gap-5 xl:grid-cols-2">
-
-      <form
-        onSubmit={handleSubmit}
-        className="ui-card space-y-5 p-6"
-      >
-        <h2 className="text-[17px] font-semibold tracking-[-0.02em]">
-          New Check-in
-        </h2>
-
-        <div>
-          <label
-            htmlFor="project"
-            className="mb-2 block text-sm text-[var(--dx-body)]"
-          >
-            Project name
-          </label>
-
+    <div className="cal mx-auto max-w-[720px] space-y-8">
+      {/* Composer */}
+      <form onSubmit={handleSubmit} className="ui-card space-y-3 p-4 sm:p-5">
+        <div className="flex items-center gap-3">
           <input
-            id="project"
-            type="text"
             value={projectName}
-            onChange={(event) => setProjectName(event.target.value)}
-            required
+            onChange={(e) => setProjectName(e.target.value)}
             maxLength={150}
-            placeholder="e.g. DevTracker"
-            className="ui-input"
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="work"
-            className="mb-2 block text-sm text-[var(--dx-body)]"
-          >
-            What are you working on?
-          </label>
-
-          <textarea
-            id="work"
-            value={workDescription}
-            onChange={(event) =>
-              setWorkDescription(event.target.value)
-            }
             required
-            rows={4}
-            placeholder="Describe your work..."
-            className="ui-input"
+            list="checkin-projects"
+            placeholder="Project"
+            aria-label="Project name"
+            className="min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[var(--dx-heading)] outline-none placeholder:text-[var(--ui-tertiary)]"
           />
+          <datalist id="checkin-projects">
+            {recentProjects.map((p) => (
+              <option key={p} value={p} />
+            ))}
+          </datalist>
         </div>
 
-        <div>
-          <label
-            htmlFor="category"
-            className="mb-2 block text-sm text-[var(--dx-body)]"
-          >
-            Category
-          </label>
+        <textarea
+          value={workDescription}
+          onChange={(e) => setWorkDescription(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) e.currentTarget.form?.requestSubmit();
+          }}
+          required
+          rows={3}
+          placeholder="What did you work on?"
+          aria-label="What did you work on?"
+          className="block w-full resize-none bg-transparent text-[14px] leading-relaxed text-[var(--dx-heading)] outline-none placeholder:text-[var(--ui-tertiary)]"
+        />
 
-          <select
-            id="category"
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
-            className="ui-input"
-          >
-            <option value="Coding">Coding</option>
-            <option value="Debugging">Debugging</option>
-            <option value="Testing">Testing</option>
-            <option value="Research">Research</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-
-        <div>
-          <label
-            htmlFor="blocker"
-            className="mb-2 block text-sm text-[var(--dx-body)]"
-          >
-            Blockers (optional)
-          </label>
-
+        {showBlocker && (
           <textarea
-            id="blocker"
             value={blocker}
-            onChange={(event) => setBlocker(event.target.value)}
+            onChange={(e) => setBlocker(e.target.value)}
             rows={2}
-            placeholder="Any issues slowing you down?"
-            className="ui-input"
+            autoFocus
+            placeholder="What’s blocking you?"
+            aria-label="Blocker"
+            className="block w-full resize-none rounded-[10px] bg-[var(--ui-fill)] px-3 py-2 text-[13px] text-[var(--dx-heading)] outline-none placeholder:text-[var(--ui-tertiary)]"
           />
-        </div>
-
-        <button
-          type="submit"
-          disabled={saving}
-          className="ui-btn-primary px-5 py-2.5"
-        >
-          {saving ? "Saving..." : "Save Check-in"}
-        </button>
-
-        {success && (
-          <p role="status" className="text-sm text-[var(--dx-accent-text)]">
-            {success}
-          </p>
         )}
 
+        <div className="flex flex-wrap items-center gap-3 border-t border-[var(--ui-hairline)] pt-3">
+          <div className="cal-segmented !w-auto" role="group" aria-label="Category">
+            {CATEGORIES.map((c) => (
+              <button key={c} type="button" aria-pressed={category === c} onClick={() => setCategory(c)}>
+                {c}
+              </button>
+            ))}
+          </div>
+
+          {!showBlocker && (
+            <button type="button" onClick={() => setShowBlocker(true)} className="cal-link-btn">
+              Add blocker
+            </button>
+          )}
+
+          <button type="submit" disabled={!canSave} className="ui-btn-primary ml-auto h-8 px-4 text-[13px]">
+            {saving ? "Saving…" : "Check in"}
+          </button>
+        </div>
+      </form>
+
+      {/* Day */}
+      <section>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <DateNav value={selectedDate} onChange={setSelectedDate} />
+          {!loading && checkins.length > 0 && (
+            <span className="text-[13px] text-[var(--ui-secondary)]">
+              {checkins.length} {checkins.length === 1 ? "entry" : "entries"}
+            </span>
+          )}
+        </div>
+
         {error && (
-          <p role="alert" className="text-sm text-[var(--dx-danger)]">
+          <p role="alert" className="mb-3 px-1 text-[13px] text-[var(--dx-danger)]">
             {error}
           </p>
         )}
-      </form>
-
-      <section className="ui-card space-y-4 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <h2 className="text-[17px] font-semibold tracking-[-0.02em]">
-            Saved Check-ins
-          </h2>
-
-          <input
-            type="date"
-            aria-label="Check-in date"
-            value={selectedDate}
-            onChange={(event) =>
-              setSelectedDate(event.target.value)
-            }
-            className="ui-input w-auto"
-          />
-        </div>
 
         {loading ? (
-          <p className="text-[var(--dx-muted)]">
-            Loading check-ins...
-          </p>
+          <p className="px-1 text-[13px] text-[var(--ui-tertiary)]">Loading…</p>
         ) : checkins.length === 0 ? (
-          <div className="ui-card p-6 text-[var(--dx-muted)]">
-            No check-ins found for this date.
+          <div className="py-14 text-center">
+            <p className="text-[15px] font-medium">No check-ins</p>
+            <p className="mt-1 text-[13px] text-[var(--ui-secondary)]">
+              {isToday ? "Write a quick note above to log what you’re doing." : "Nothing was logged on this day."}
+            </p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {checkins.map((checkin) => (
-              <article
-                key={checkin.id}
-                className="rounded-[12px] bg-[var(--ui-fill)] p-4"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="font-semibold">
-                    {checkin.project_name}
-                  </h3>
-
-                  <span className="rounded-full bg-[var(--dx-accent-soft)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--dx-accent-text)]">
-                    {checkin.category}
-                  </span>
-                </div>
-
-                <p className="mt-3 whitespace-pre-wrap text-sm text-[var(--dx-body)]">
-                  {checkin.work_description}
-                </p>
-
-                {checkin.blocker && (
-                  <p className="mt-3 whitespace-pre-wrap text-sm text-[var(--dx-warning)]">
-                    Blocker: {checkin.blocker}
+          <ol className="ui-card divide-y divide-[var(--ui-hairline)] !p-0">
+            {checkins.map((c) => (
+              <li key={c.id} className="flex gap-4 px-4 py-3.5 sm:px-5">
+                <time className="w-[64px] shrink-0 pt-px text-[12px] tabular-nums text-[var(--ui-tertiary)]">
+                  {timeLabel(c.created_at)}
+                </time>
+                <div className="min-w-0 flex-1">
+                  <p className="flex flex-wrap items-baseline gap-x-2 text-[14px]">
+                    <span className="font-semibold text-[var(--dx-heading)]">{c.project_name}</span>
+                    <span className="text-[12px] text-[var(--ui-secondary)]">{c.category}</span>
                   </p>
-                )}
-
-                <p className="mt-4 text-xs text-[var(--dx-muted)]">
-                  {checkin.created_at
-                    .replace("T", " ")
-                    .slice(0, 19)}
-                </p>
-              </article>
+                  <p className="mt-0.5 whitespace-pre-wrap text-[14px] leading-relaxed text-[var(--dx-body)]">
+                    {c.work_description}
+                  </p>
+                  {c.blocker && (
+                    <p className="mt-1.5 whitespace-pre-wrap text-[13px] text-[var(--dx-warning)]">
+                      Blocked: {c.blocker}
+                    </p>
+                  )}
+                </div>
+              </li>
             ))}
-          </div>
+          </ol>
         )}
       </section>
     </div>

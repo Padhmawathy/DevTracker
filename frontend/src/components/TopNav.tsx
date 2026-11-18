@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import AppIcon from "./AppIcon";
 
 export type Page =
   | "overview"
@@ -65,9 +66,7 @@ export default function TopNav({ activePage, onNavigate }: TopNavProps) {
           className="flex items-center gap-2.5 rounded-[8px] md:w-[180px]"
           aria-label="DevTrack home"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-[8px] bg-gradient-to-b from-[#47a1ff] to-[#0a6cf0] text-[13px] font-semibold text-white shadow-[0_2px_6px_rgba(0,113,227,0.35)]">
-            D
-          </span>
+          <AppIcon size={28} className="shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]" />
           <span className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--dx-heading)]">
             DevTrack
           </span>

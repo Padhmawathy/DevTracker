@@ -94,7 +94,8 @@ class SQLiteTaskStore:
     # ---------------- queries ----------------
 
     _SELECT = """
-        SELECT tasks.*, jobs.name AS job_name, jobs.color AS job_color
+        SELECT tasks.*, jobs.name AS job_name, jobs.color AS job_color,
+               jobs.emoji AS job_emoji
         FROM tasks
         LEFT JOIN jobs ON jobs.id = tasks.job_id
     """
@@ -222,6 +223,7 @@ class SQLiteTaskStore:
             "job_id": row["job_id"],
             "job_name": row["job_name"],
             "job_color": row["job_color"],
+            "job_emoji": row["job_emoji"],
             "created_at": row["created_at"],
             "updated_at": row["updated_at"],
             "completed_at": row["completed_at"],
