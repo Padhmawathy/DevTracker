@@ -97,7 +97,7 @@ export default function ActivityTimeline() {
           onChange={(event) =>
             setSelectedDate(event.target.value)
           }
-          className="rounded-lg border border-[var(--dx-border-strong)] bg-[var(--dx-raised)] px-3 py-2 text-[var(--dx-heading)]"
+          className="ui-input w-auto"
         />
       </div>
 
@@ -115,7 +115,7 @@ export default function ActivityTimeline() {
 
       {!loading && !error && data && (
         <>
-          <div className="mb-5 rounded-lg border border-[var(--dx-border)] bg-[var(--dx-surface)] px-5 py-4">
+          <div className="ui-card mb-5 px-5 py-4">
             <p className="text-sm text-[var(--dx-muted)]">
               Recorded activity groups
             </p>
@@ -125,11 +125,11 @@ export default function ActivityTimeline() {
           </div>
 
           {data.activities.length === 0 ? (
-            <div className="rounded-lg border border-[var(--dx-border)] bg-[var(--dx-surface)] p-6 text-[var(--dx-muted)]">
+            <div className="ui-card p-6 text-[var(--dx-muted)]">
               No activity recorded for this date.
             </div>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-[var(--dx-border)] bg-[var(--dx-surface)] divide-y divide-[var(--dx-border)]">
+            <div className="ui-card overflow-hidden divide-y divide-[var(--dx-border)]">
               {data.activities.map((activity, index) => (
                 <div
                   key={`${activity.id}-${index}`}
@@ -140,7 +140,7 @@ export default function ActivityTimeline() {
                       {activity.display_name || activity.process_name}
                     </h3>
 
-                    <span className="font-mono text-[12px] font-medium text-[var(--dx-accent-text)]">
+                    <span className="text-[12px] font-medium tabular-nums text-[var(--dx-accent-text)]">
                       {formatDuration(
                         activity.duration_seconds
                       )}

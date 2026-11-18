@@ -1,76 +1,76 @@
-/* DevTrack semantic palette for Settings, Reports, Check-ins, Activity.
-   Import this file AFTER index.css in src/main.tsx.
-   Colors are scoped by the existing data-theme attribute. */
+/* DevTrack semantic palette — Apple system colours.
+   Scoped by the data-theme attribute set in theme.ts.
+   --dx-*  semantic tokens used by every page
+   --ui-*  surfaces, fills and hairlines for the shell and shared components */
+
 :root {
-  --dx-surface: #1c1f20;
-  --dx-raised: #232827;
-  --dx-input: #17191a;
-  --dx-border: #2b2f30;
-  --dx-border-strong: #39413d;
-  --dx-heading: #f0f2ee;
-  --dx-body: #c3ccc5;
-  --dx-muted: #929c95;
-  --dx-accent: #a7c9b4;
-  --dx-accent-hover: #bdd9c7;
-  --dx-accent-text: #aacbb6;
-  --dx-accent-contrast: #17231b;
-  --dx-accent-soft: #29332e;
-  --dx-selected: #29372f;
-  --dx-disabled: #333b38;
-  --dx-hover: #242829;
-  --dx-track: #343b38;
-  --dx-danger: #f1aaa5;
-  --dx-danger-border: #6b4848;
-  --dx-warning: #e6bc82;
-}
-:root[data-theme="light"] {
-  --dx-surface: #ffffff;
-  --dx-raised: #f4f7f5;
-  --dx-input: #ffffff;
-  --dx-border: #dce4de;
-  --dx-border-strong: #cbd8cf;
-  --dx-heading: #17251d;
-  --dx-body: #405449;
-  --dx-muted: #64766b;
-  --dx-accent: #427b59;
-  --dx-accent-hover: #356748;
-  --dx-accent-text: #32734d;
+  /* Dark */
+  --ui-page: #000000;
+  --ui-sidebar: rgba(28, 28, 30, 0.72);
+  --ui-toolbar: rgba(0, 0, 0, 0.72);
+  --ui-hairline: rgba(255, 255, 255, 0.09);
+  --ui-fill: rgba(255, 255, 255, 0.06);
+  --ui-fill-strong: rgba(255, 255, 255, 0.11);
+  --ui-secondary: rgba(235, 235, 245, 0.6);
+  --ui-tertiary: rgba(235, 235, 245, 0.3);
+  --ui-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+
+  --dx-surface: #1c1c1e;
+  --dx-raised: #2c2c2e;
+  --dx-input: #1c1c1e;
+  --dx-border: rgba(255, 255, 255, 0.09);
+  --dx-border-strong: rgba(255, 255, 255, 0.16);
+  --dx-heading: #f5f5f7;
+  --dx-body: #d1d1d6;
+  --dx-muted: #98989d;
+  --dx-accent: #0a84ff;
+  --dx-accent-hover: #409cff;
+  --dx-accent-text: #4da3ff;
   --dx-accent-contrast: #ffffff;
-  --dx-accent-soft: #eaf3ec;
-  --dx-selected: #e4f0e8;
-  --dx-disabled: #dae4dd;
-  --dx-hover: #f2f8f3;
-  --dx-track: #dfe8e1;
-  --dx-danger: #ad3e3e;
-  --dx-danger-border: #e1b7b7;
-  --dx-warning: #97602c;
+  --dx-accent-soft: rgba(10, 132, 255, 0.2);
+  --dx-selected: rgba(10, 132, 255, 0.2);
+  --dx-disabled: #3a3a3c;
+  --dx-hover: rgba(255, 255, 255, 0.06);
+  --dx-track: #3a3a3c;
+  --dx-danger: #ff453a;
+  --dx-danger-border: rgba(255, 69, 58, 0.4);
+  --dx-warning: #ff9f0a;
+  --dx-success: #30d158;
 }
-/* Earlier prototype CSS used !important on inputs and labels.
-   Override that specifically for pages we have migrated. */
-:root[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
-:root[data-theme="light"] textarea,
-:root[data-theme="light"] select {
-  background-color: var(--dx-input) !important;
-  color: var(--dx-heading) !important;
-  border-color: var(--dx-border-strong) !important;
-}
-:root[data-theme="light"] input::placeholder,
-:root[data-theme="light"] textarea::placeholder {
-  color: var(--dx-muted) !important;
-  opacity: 1;
-}
-:root[data-theme="light"] select option {
-  background-color: var(--dx-input) !important;
-  color: var(--dx-heading) !important;
-}
-:root[data-theme="light"] label {
-  color: var(--dx-body) !important;
-}
-/* Buttons, including the selected Appearance option, use readable contrast. */
-:root[data-theme="light"] button[aria-pressed="true"] {
-  border-color: var(--dx-accent);
-}
-/* Restore gradient-independent slider presentation, including with old global input rules. */
-input[type="range"] {
-  accent-color: var(--dx-accent);
+
+:root[data-theme="light"] {
+  --ui-page: #f5f5f7;
+  --ui-sidebar: rgba(236, 236, 240, 0.72);
+  --ui-toolbar: rgba(245, 245, 247, 0.72);
+  --ui-hairline: rgba(0, 0, 0, 0.08);
+  --ui-fill: rgba(0, 0, 0, 0.04);
+  --ui-fill-strong: rgba(0, 0, 0, 0.08);
+  --ui-secondary: rgba(60, 60, 67, 0.6);
+  --ui-tertiary: rgba(60, 60, 67, 0.3);
+  --ui-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 8px 24px rgba(0, 0, 0, 0.05);
+
+  --dx-surface: #ffffff;
+  --dx-raised: #f5f5f7;
+  --dx-input: #ffffff;
+  --dx-border: rgba(0, 0, 0, 0.08);
+  --dx-border-strong: rgba(0, 0, 0, 0.14);
+  --dx-heading: #1d1d1f;
+  --dx-body: #424245;
+  --dx-muted: #86868b;
+  --dx-accent: #0071e3;
+  --dx-accent-hover: #0077ed;
+  --dx-accent-text: #0066cc;
+  --dx-accent-contrast: #ffffff;
+  --dx-accent-soft: rgba(0, 113, 227, 0.12);
+  --dx-selected: rgba(0, 113, 227, 0.1);
+  --dx-disabled: #e8e8ed;
+  --dx-hover: rgba(0, 0, 0, 0.04);
+  --dx-track: #e8e8ed;
+  --dx-danger: #d70015;
+  --dx-danger-border: rgba(215, 0, 21, 0.3);
+  --dx-warning: #b25000;
+  --dx-success: #248a3d;
 }

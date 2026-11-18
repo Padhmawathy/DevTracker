@@ -139,7 +139,7 @@ export default function Reports() {
         type="date"
         value={selectedDate}
         onChange={(event) => setSelectedDate(event.target.value)}
-        className="rounded-lg border border-[var(--dx-border-strong)] bg-[var(--dx-raised)] px-3 py-2 text-[var(--dx-heading)]"
+        className="ui-input w-auto"
         />
     </div>
 
@@ -172,7 +172,7 @@ export default function Reports() {
 
       {!loading && report && (
         <>
-          <section className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-[var(--dx-border)] bg-[var(--dx-border)] xl:grid-cols-4">
+          <section className="grid grid-cols-2 gap-px overflow-hidden rounded-[14px] bg-[var(--ui-hairline)] xl:grid-cols-4">
             {[
               {
                 label: "Tracked Time",
@@ -215,7 +215,7 @@ export default function Reports() {
             })}
           </section>
 
-          <section className="rounded-lg border border-[var(--dx-border)] bg-[var(--dx-surface)] p-6">
+          <section className="ui-card p-6">
             <h2 className="mb-5 text-sm font-semibold">
               Application Usage
             </h2>
@@ -245,19 +245,19 @@ export default function Reports() {
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-sm font-semibold">
+            <h2 className="text-[17px] font-semibold tracking-[-0.02em]">
               Project Work
             </h2>
 
             {projects.length === 0 ? (
-              <div className="rounded-lg border border-[var(--dx-border)] bg-[var(--dx-surface)] p-6 text-[var(--dx-muted)]">
+              <div className="ui-card p-6 text-[var(--dx-muted)]">
                 No project check-ins recorded for this date.
               </div>
             ) : (
               projects.map(([name, details]) => (
                 <article
                   key={name}
-                  className="rounded-lg border border-[var(--dx-border)] bg-[var(--dx-surface)] p-6"
+                  className="ui-card p-6"
                 >
                   <h3 className="text-sm font-semibold">
                     {name}
@@ -267,7 +267,7 @@ export default function Reports() {
                     {details.categories.map((category) => (
                       <span
                         key={category}
-                        className="rounded-md border border-[var(--dx-border)] bg-[var(--dx-accent-soft)] px-2 py-1 text-xs text-[var(--dx-accent-text)]"
+                        className="rounded-full bg-[var(--dx-accent-soft)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--dx-accent-text)]"
                       >
                         {category}
                       </span>

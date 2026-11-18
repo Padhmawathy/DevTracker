@@ -101,9 +101,9 @@ function FocusGoalSlider({ value, onChange }: { value: number; onChange: (minute
   const safeValue = Math.min(720, Math.max(30, value));
   const progress = ((safeValue - 30) / (720 - 30)) * 100;
   return (
-    <section className="overflow-hidden rounded-2xl border border-[var(--dx-border)] bg-gradient-to-br from-[var(--dx-surface)] via-[var(--dx-surface)] to-[var(--dx-surface)] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.16)] sm:p-3">
+    <section className="ui-card overflow-hidden p-5 sm:p-6">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--dx-border-strong)] bg-[var(--dx-accent-soft)]">
+        <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[var(--dx-accent-soft)] text-[var(--dx-accent-text)]">
           <Target size={20} className="text-[var(--dx-accent-text)]" />
         </div>
         <div>
@@ -124,7 +124,7 @@ function FocusGoalSlider({ value, onChange }: { value: number; onChange: (minute
       <div className="mt-3 flex justify-between text-[11px] text-[var(--dx-muted)]">
         <span>30 minutes</span><span>12 hours</span>
       </div>
-      <div className="mt-5 flex items-start gap-2 rounded-xl border border-[var(--dx-border)] bg-[var(--dx-raised)] px-3.5 py-3 text-[12px] leading-relaxed text-[var(--dx-body)]">
+      <div className="mt-5 flex items-start gap-2 rounded-[12px] bg-[var(--ui-fill)] px-3.5 py-3 text-[12px] leading-relaxed text-[var(--dx-body)]">
         <Sparkles size={16} className="mt-0.5 shrink-0 text-[var(--dx-accent-text)]" />
         <span>Your daily tracking target is <strong className="font-semibold text-[var(--dx-heading)]">{durationLabel(safeValue * 60)}</strong>. Save your profile to apply it.</span>
       </div>
@@ -449,9 +449,9 @@ export default function Settings() {
 
     <div className="max-w-5xl space-y-5">
 
-      <section className="overflow-hidden rounded-2xl border border-[var(--dx-border)] bg-[var(--dx-surface)]">
+      <section className="ui-card overflow-hidden">
         <div className="border-b border-[var(--dx-border)] px-5 py-4 sm:px-6">
-          <h2 className="text-[14px] font-semibold text-[var(--dx-heading)]">
+          <h2 className="text-[17px] font-semibold tracking-[-0.02em] text-[var(--dx-heading)]">
             Appearance
           </h2>
           <p className="mt-1 text-[11px] text-[var(--dx-muted)]">
@@ -470,10 +470,10 @@ export default function Settings() {
               type="button"
               onClick={() => changeTheme(value)}
               aria-pressed={theme === value}
-              className={`flex flex-col items-center gap-2 rounded-xl border px-3 py-4 text-[12px] font-medium transition ${
+              className={`flex flex-col items-center gap-2 rounded-[12px] px-3 py-4 text-[13px] font-medium transition ${
                 theme === value
-                  ? "border-[var(--dx-accent)] bg-[var(--dx-selected)] text-[var(--dx-accent-text)]"
-                  : "border-[var(--dx-border-strong)] bg-[var(--dx-raised)] text-[var(--dx-muted)] hover:border-[var(--dx-accent)]"
+                  ? "bg-[var(--dx-accent-soft)] text-[var(--dx-accent-text)] shadow-[inset_0_0_0_2px_var(--dx-accent)]"
+                  : "bg-[var(--ui-fill)] text-[var(--dx-body)] hover:bg-[var(--ui-fill-strong)]"
               }`}
             >
               <Icon size={19} />
@@ -487,7 +487,7 @@ export default function Settings() {
 
           onSubmit={handleProfileSave}
 
-          className="overflow-hidden rounded-2xl border border-[var(--dx-border)] bg-[var(--dx-surface)] shadow-[0_12px_35px_rgba(0,0,0,0.12)]"
+          className="ui-card overflow-hidden"
 
         >
 
@@ -499,7 +499,7 @@ export default function Settings() {
 
             <div>
 
-              <h2 className="text-[14px] font-semibold text-[var(--dx-heading)]">
+              <h2 className="text-[17px] font-semibold tracking-[-0.02em] text-[var(--dx-heading)]">
 
                 Developer Profile
 
@@ -571,7 +571,7 @@ export default function Settings() {
 
                       placeholder="Your name"
 
-                      className="w-full rounded-md border border-[var(--dx-border-strong)] bg-[var(--dx-input)] px-3 py-2.5 text-[13px] text-[var(--dx-heading)] outline-none focus:border-[var(--dx-accent)]"
+                      className="ui-input"
 
                     />
 
@@ -605,7 +605,7 @@ export default function Settings() {
 
                       }
 
-                      className="w-full rounded-md border border-[var(--dx-border-strong)] bg-[var(--dx-input)] px-3 py-2.5 text-[13px] text-[var(--dx-heading)] outline-none focus:border-[var(--dx-accent)]"
+                      className="ui-input"
 
                     >
 
@@ -669,7 +669,7 @@ export default function Settings() {
 
                       placeholder="Python, TypeScript, Java..."
 
-                      className="w-full rounded-md border border-[var(--dx-border-strong)] bg-[var(--dx-input)] px-3 py-2.5 text-[13px] text-[var(--dx-heading)] outline-none focus:border-[var(--dx-accent)]"
+                      className="ui-input"
 
                     />
 
@@ -715,7 +715,7 @@ export default function Settings() {
 
                       placeholder="VS Code, IntelliJ..."
 
-                      className="w-full rounded-md border border-[var(--dx-border-strong)] bg-[var(--dx-input)] px-3 py-2.5 text-[13px] text-[var(--dx-heading)] outline-none focus:border-[var(--dx-accent)]"
+                      className="ui-input"
 
                     />
 
@@ -738,7 +738,7 @@ export default function Settings() {
 
                   disabled={profileSaving}
 
-                  className="flex items-center gap-2 rounded-md bg-[var(--dx-accent)] px-5 py-2.5 text-sm font-semibold text-[var(--dx-accent-contrast)] hover:bg-[var(--dx-accent-hover)] disabled:opacity-50"
+                  className="ui-btn-primary flex items-center gap-2 px-5 py-2.5"
 
                 >
 
@@ -796,7 +796,7 @@ export default function Settings() {
 
         <form onSubmit={handleSave} className="space-y-6">
 
-          <section className="space-y-6 rounded-2xl border border-[var(--dx-border)] bg-[var(--dx-surface)] p-5 shadow-[0_12px_35px_rgba(0,0,0,0.12)] sm:p-6">
+          <section className="ui-card space-y-6 p-5 sm:p-6">
 
             <h2 className="flex items-center gap-2 text-sm font-semibold">
 
@@ -840,11 +840,11 @@ export default function Settings() {
                     updateField("tracking_enabled", enabled);
                   }
                 }}
-                className="h-4 w-4 accent-[var(--dx-accent)]"
+                className="ui-switch"
               />
             </label>
 
-            <div className="rounded-lg border border-[var(--dx-border-strong)] p-4">
+            <div className="rounded-[12px] bg-[var(--ui-fill)] p-4">
               <p className="text-sm text-[var(--dx-body)]">
                 Consent status: {settings.tracking_consent_granted ? "Granted" : "Not granted"}
               </p>
@@ -863,7 +863,7 @@ export default function Settings() {
                     } : current);
                     setSuccess("");
                   }}
-                  className="mt-3 rounded-md border border-[var(--dx-danger-border)] px-3 py-2 text-sm text-[var(--dx-danger)]"
+                  className="mt-3 rounded-[10px] bg-[var(--ui-fill)] px-3 py-2 text-sm text-[var(--dx-danger)]"
                 >
                   Withdraw tracking consent
                 </button>
@@ -873,7 +873,7 @@ export default function Settings() {
               </p>
             </div>
 
-            <div className="flex items-start gap-3 rounded-xl border border-[var(--dx-border-strong)] bg-[var(--dx-accent-soft)] px-4 py-3">
+            <div className="flex items-start gap-3 rounded-[12px] bg-[var(--dx-accent-soft)] px-4 py-3">
               <Clock3 size={18} className="mt-0.5 shrink-0 text-[var(--dx-accent-text)]" />
               <p className="text-[12px] leading-relaxed text-[var(--dx-body)]">Choose how precisely DevTrack records app changes, and when inactive time should stop counting.</p>
             </div>
@@ -917,7 +917,7 @@ export default function Settings() {
 
 
 
-          <section className="space-y-6 rounded-2xl border border-[var(--dx-border)] bg-[var(--dx-surface)] p-5 shadow-[0_12px_35px_rgba(0,0,0,0.12)] sm:p-6">
+          <section className="ui-card space-y-6 p-5 sm:p-6">
 
             <h2 className="flex items-center gap-2 text-sm font-semibold">
 
@@ -969,7 +969,7 @@ export default function Settings() {
 
                 }
 
-                className="h-4 w-4 accent-[var(--dx-accent)]"
+                className="ui-switch"
 
               />
 
@@ -991,7 +991,7 @@ export default function Settings() {
 
 
 
-          <section className="overflow-hidden rounded-2xl border border-[var(--dx-border)] bg-[var(--dx-surface)] shadow-[0_12px_35px_rgba(0,0,0,0.12)]">
+          <section className="ui-card overflow-hidden">
 
             <div className="flex items-center gap-3 border-b border-[var(--dx-border)] px-5 py-5 sm:px-6">
 
@@ -999,7 +999,7 @@ export default function Settings() {
 
               <div>
 
-                <h2 className="text-[14px] font-semibold text-[var(--dx-heading)]">
+                <h2 className="text-[17px] font-semibold tracking-[-0.02em] text-[var(--dx-heading)]">
 
                   Smart check-in reminders
 
@@ -1051,7 +1051,7 @@ export default function Settings() {
 
                   }
 
-                  className="h-4 w-4 accent-[var(--dx-accent)]"
+                  className="ui-switch"
 
                 />
 
@@ -1115,7 +1115,7 @@ export default function Settings() {
 
                     }
 
-                    className="w-full rounded-md border border-[var(--dx-border-strong)] bg-[var(--dx-input)] px-3 py-2.5 text-[13px] text-[var(--dx-heading)] outline-none focus:border-[var(--dx-accent)]"
+                    className="ui-input"
 
                   />
 
@@ -1153,7 +1153,7 @@ export default function Settings() {
 
                     }
 
-                    className="w-full rounded-md border border-[var(--dx-border-strong)] bg-[var(--dx-input)] px-3 py-2.5 text-[13px] text-[var(--dx-heading)] outline-none focus:border-[var(--dx-accent)]"
+                    className="ui-input"
 
                   />
 
@@ -1195,7 +1195,7 @@ export default function Settings() {
 
                   }
 
-                  className="h-4 w-4 accent-[var(--dx-accent)]"
+                  className="ui-switch"
 
                 />
 
@@ -1215,7 +1215,7 @@ export default function Settings() {
 
             disabled={saving}
 
-            className="flex items-center gap-2 rounded-md bg-[var(--dx-accent)] px-5 py-2.5 text-sm font-semibold text-[var(--dx-accent-contrast)] hover:bg-[var(--dx-accent-hover)] disabled:opacity-50"
+            className="ui-btn-primary flex items-center gap-2 px-5 py-2.5"
 
           >
 

@@ -21,9 +21,7 @@ const CATEGORY_OPTIONS: { value: AppCategory; label: string }[] = [
 ];
 
 const inputStyle =
-  "w-full rounded-md border border-[#373d3c] bg-[#17191a] " +
-  "px-3 py-2.5 text-[13px] text-[#e7eae6] outline-none " +
-  "focus:border-[#a7c9b4]";
+  "ui-input";
 
 export default function ApplicationCategories() {
   const [rules, setRules] = useState<AppCategoryRule[]>([]);
@@ -167,17 +165,17 @@ export default function ApplicationCategories() {
   return (
     <form
       onSubmit={handleSave}
-      className="overflow-hidden rounded-lg border border-[#2b2f30] bg-[#1c1f20]"
+      className="ui-card overflow-hidden"
     >
-      <div className="flex items-center gap-3 border-b border-[#2b2f30] px-5 py-4">
-        <FolderKanban size={19} className="text-[#a7c9b4]" />
+      <div className="flex items-center gap-3 border-b border-[var(--dx-border)] px-5 py-4">
+        <FolderKanban size={19} className="text-[var(--dx-accent-text)]" />
 
         <div>
-          <h2 className="text-[14px] font-semibold text-[#f0f2ee]">
+          <h2 className="text-[17px] font-semibold tracking-[-0.02em] text-[var(--dx-heading)]">
             Application Categories
           </h2>
 
-          <p className="mt-1 text-[11px] text-[#858e8b]">
+          <p className="mt-1 text-[11px] text-[var(--dx-muted)]">
             Organize applications according to your own workflow.
           </p>
         </div>
@@ -185,13 +183,13 @@ export default function ApplicationCategories() {
 
       <div className="space-y-5 p-5">
         {loading ? (
-          <p className="text-sm text-[#929c95]">
+          <p className="text-sm text-[var(--dx-muted)]">
             Loading application categories...
           </p>
         ) : (
           <>
             {rules.length === 0 ? (
-              <p className="text-sm text-[#858e8b]">
+              <p className="text-sm text-[var(--dx-muted)]">
                 No application categories configured yet.
               </p>
             ) : (
@@ -239,7 +237,7 @@ export default function ApplicationCategories() {
                       aria-label={`Remove ${rule.app_name}`}
                       title={`Remove ${rule.app_name}`}
                       onClick={() => removeRule(index)}
-                      className="rounded-md border border-[#373d3c] p-2.5 text-[#f1aaa5] hover:bg-[#332626]"
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--dx-danger)] hover:bg-[var(--ui-fill)]"
                     >
                       <Trash2 size={17} />
                     </button>
@@ -248,8 +246,8 @@ export default function ApplicationCategories() {
               </div>
             )}
 
-            <div className="space-y-3 border-t border-[#2b2f30] pt-5">
-              <h3 className="text-[13px] font-medium text-[#e1e5e0]">
+            <div className="space-y-3 border-t border-[var(--dx-border)] pt-5">
+              <h3 className="text-[13px] font-medium text-[var(--dx-heading)]">
                 Add application
               </h3>
 
@@ -282,7 +280,7 @@ export default function ApplicationCategories() {
                 <button
                   type="button"
                   onClick={addRule}
-                  className="flex items-center gap-2 rounded-md border border-[#39413d] px-4 py-2.5 text-sm text-[#a7c9b4] hover:bg-[#26342c]"
+                  className="ui-btn h-[38px] px-4 text-[var(--dx-accent-text)]"
                 >
                   <Plus size={17} />
                   Add
@@ -293,7 +291,7 @@ export default function ApplicationCategories() {
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-2 rounded-md bg-[#a7c9b4] px-5 py-2.5 text-sm font-semibold text-[#17231b] hover:bg-[#bdd9c7] disabled:opacity-50"
+              className="ui-btn-primary flex items-center gap-2 px-5 py-2.5"
             >
               <Save size={17} />
               {saving ? "Saving..." : "Save Categories"}
@@ -302,13 +300,13 @@ export default function ApplicationCategories() {
         )}
 
         {success && (
-          <p role="status" className="text-sm text-[#a7c9b4]">
+          <p role="status" className="text-sm text-[var(--dx-accent-text)]">
             {success}
           </p>
         )}
 
         {error && (
-          <p role="alert" className="text-sm text-[#f1aaa5]">
+          <p role="alert" className="text-sm text-[var(--dx-danger)]">
             {error}
           </p>
         )}

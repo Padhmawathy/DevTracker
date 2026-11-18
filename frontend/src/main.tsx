@@ -3,7 +3,6 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import { initializeTheme } from "./theme";
 import App from "./App.tsx";
-import "./devtrack_light_contrast_patch.css";
 import {
   getTrackerSettings,
   updateTrackerSettings,
@@ -86,59 +85,63 @@ function DevTrackStartup() {
 
   if (screen === "loading") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#151819] text-[#dbe3dd]">
-        Starting DevTrack...
+      <main className="flex min-h-screen items-center justify-center bg-[var(--ui-page)] text-[13px] text-[var(--ui-secondary)]">
+        <span className="flex items-center gap-3">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--ui-fill-strong)] border-t-[var(--dx-accent)]" />
+          Starting DevTrack…
+        </span>
       </main>
     );
   }
 
   if (screen === "error") {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#151819] p-8 text-[#e5ebe6]">
-        <h1 className="text-xl font-semibold">DevTrack couldn't start</h1>
-        <p role="alert" className="text-sm text-[#f1aaa5]">{message}</p>
+      <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[var(--ui-page)] p-8 text-center text-[var(--dx-heading)]">
+        <h1 className="text-[22px] font-semibold tracking-[-0.02em]">DevTrack couldn’t start</h1>
+        <p role="alert" className="max-w-sm text-[14px] text-[var(--ui-secondary)]">{message}</p>
         <button
           type="button"
-          className="rounded-md bg-[#a7c9b4] px-5 py-2 text-[#17231b]"
+          className="ui-btn-primary mt-3 h-9 px-5"
           onClick={() => { setMessage(""); setAttempt(0); setScreen("loading"); }}
         >
-          Retry connection
+          Try again
         </button>
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#151819] px-5 py-10 text-[#e5ebe6]">
-      <section className="w-full max-w-xl space-y-5 rounded-xl border border-[#39413d] bg-[#1c1f20] p-8">
-        <p className="text-xs font-semibold uppercase tracking-widest text-[#a7c9b4]">Privacy and control</p>
-        <h1 className="text-3xl font-semibold">Welcome to DevTrack</h1>
-        <p className="text-sm leading-6 text-[#b6c0b9]">
-          DevTrack can record which applications you use and how long you use them.
-          If window-title collection is enabled in Settings, it can also record active
-          window titles, which may contain sensitive information.
+    <main className="flex min-h-screen items-center justify-center bg-[var(--ui-page)] px-5 py-10 text-[var(--dx-heading)]">
+      <section className="ui-card w-full max-w-[480px] p-8 text-center sm:p-10">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[14px] bg-gradient-to-b from-[#3b9cff] to-[#0062d1] text-[22px] font-semibold text-white shadow-[0_6px_16px_rgba(0,113,227,0.35)]">
+          D
+        </div>
+        <h1 className="mt-6 text-[28px] font-bold tracking-[-0.025em]">Welcome to DevTrack</h1>
+        <p className="mt-3 text-[15px] leading-relaxed text-[var(--ui-secondary)]">
+          DevTrack can record which apps you use and for how long. If window-title
+          collection is turned on in Settings, it can also record window titles,
+          which may contain sensitive information.
         </p>
-        <p className="text-sm leading-6 text-[#b6c0b9]">
-          Activity information is stored locally on this computer. Tracking stays off
-          until you explicitly grant permission. You can pause tracking or withdraw
-          consent in Settings at any time. Declining will not prevent you from using
-          the rest of DevTrack.
-        </p>
-        {message && <p role="alert" className="text-sm text-[#f1aaa5]">{message}</p>}
-        <div className="flex flex-wrap gap-3 pt-2">
+        <div className="mt-6 space-y-3 rounded-[12px] bg-[var(--ui-fill)] p-4 text-left text-[13px] leading-relaxed text-[var(--dx-body)]">
+          <p><span className="font-semibold text-[var(--dx-heading)]">Stays on this computer.</span> Activity is stored locally.</p>
+          <p><span className="font-semibold text-[var(--dx-heading)]">Off until you allow it.</span> Pause tracking or withdraw consent in Settings at any time.</p>
+          <p><span className="font-semibold text-[var(--dx-heading)]">Optional.</span> Declining doesn’t stop you using the rest of DevTrack.</p>
+        </div>
+        {message && <p role="alert" className="mt-4 text-[13px] text-[var(--dx-danger)]">{message}</p>}
+        <div className="mt-7 flex flex-col gap-2">
           <button
             type="button"
             disabled={busy}
             onClick={() => void enableTracking()}
-            className="rounded-md bg-[#a7c9b4] px-5 py-3 font-semibold text-[#17231b] disabled:opacity-50"
+            className="ui-btn-primary h-11 w-full text-[15px]"
           >
-            {busy ? "Saving..." : "Enable Tracking"}
+            {busy ? "Saving…" : "Enable Tracking"}
           </button>
           <button
             type="button"
             disabled={busy}
             onClick={declineTracking}
-            className="rounded-md border border-[#546159] px-5 py-3 disabled:opacity-50"
+            className="h-11 w-full rounded-full text-[15px] font-medium text-[var(--dx-accent-text)] hover:bg-[var(--ui-fill)] disabled:opacity-40"
           >
             Not Now
           </button>
