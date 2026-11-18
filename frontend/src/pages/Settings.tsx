@@ -24,17 +24,6 @@ function durationLabel(totalSeconds: number): string {
   return parts.join(" ");
 }
 
-const ROLES: { value: string; label: string }[] = [
-  { value: "frontend", label: "Frontend Developer" },
-  { value: "backend", label: "Backend Developer" },
-  { value: "fullstack", label: "Full-stack Developer" },
-  { value: "mobile", label: "Mobile Developer" },
-  { value: "devops", label: "DevOps Engineer" },
-  { value: "qa", label: "QA Engineer" },
-  { value: "data", label: "Data Developer" },
-  { value: "other", label: "Other" },
-];
-
 const FOCUS_GOALS = Array.from({ length: 24 }, (_, i) => (i + 1) * 30); // 30 min – 12 hr
 
 const THEMES: { value: ThemePreference; label: string }[] = [
@@ -282,34 +271,6 @@ export default function Settings() {
               maxLength={80}
               placeholder="Your name"
               onChange={(e) => setProfileField("display_name", e.target.value)}
-              className={inlineInput}
-            />
-          </Row>
-          <Choice
-            id="profile-role"
-            label="Role"
-            value={profile.role}
-            options={ROLES.map((r) => r.value)}
-            format={(v) => ROLES.find((r) => r.value === v)?.label ?? String(v)}
-            onChange={(v) => setProfileField("role", v)}
-          />
-          <Row label="Language" htmlFor="profile-language">
-            <input
-              id="profile-language"
-              value={profile.primary_language}
-              maxLength={80}
-              placeholder="Python, TypeScript…"
-              onChange={(e) => setProfileField("primary_language", e.target.value)}
-              className={inlineInput}
-            />
-          </Row>
-          <Row label="Editor" htmlFor="profile-editor">
-            <input
-              id="profile-editor"
-              value={profile.primary_editor}
-              maxLength={80}
-              placeholder="VS Code…"
-              onChange={(e) => setProfileField("primary_editor", e.target.value)}
               className={inlineInput}
             />
           </Row>

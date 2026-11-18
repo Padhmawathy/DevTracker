@@ -1,39 +1,25 @@
-
 import { useEffect, useState } from "react";
+import DateNav from "../components/DateNav";
+import { todayIso } from "../lib/dates";
 import { apiFetch, getDailyReport, type DailySummary } from "../services/api";
-import {
-  CalendarDays,
-  Clock3,
-  FileText,
-  FolderKanban,
-  Download,
-} from "lucide-react";
-
-function localDate(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
 
 function formatDuration(seconds: number): string {
-  const total = Math.floor(seconds);
+  const total = Math.max(0, Math.floor(seconds || 0));
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor((total % 3600) / 60);
-  const remaining = total % 60;
-
   if (hours > 0) return `${hours}h ${minutes}m`;
-  if (minutes > 0) return `${minutes}m ${remaining}s`;
-  return `${remaining}s`;
+  if (minutes > 0) return `${minutes}m`;
+  return `${total}s`;
 }
 
+const TOP_APPS = 8;
+
 export default function Reports() {
-  const [selectedDate, setSelectedDate] = useState(localDate());
+  const [selectedDate, setSelectedDate] = useState(todayIso());
   const [report, setReport] = useState<DailySummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showAllApps, setShowAllApps] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,27 +27,21 @@ export default function Reports() {
     async function loadReport() {
       setLoading(true);
       setError("");
-      setReport(null);
-
+      setShowAllApps(false);
       try {
         const data = await getDailyReport(selectedDate);
-
-        if (!cancelled) {
-          setReport(data);
-        }
+        if (!cancelled) setReport(data);
       } catch {
         if (!cancelled) {
-          setError("Unable to load the daily report.");
+          setReport(null);
+          setError("Unable to load the report.");
         }
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
 
     void loadReport();
-
     return () => {
       cancelled = true;
     };
@@ -69,238 +49,162 @@ export default function Reports() {
 
   async function downloadMarkdown() {
     if (loading || !report) return;
-
     try {
       setError("");
-
-      const response = await apiFetch(
-        `/api/reports/${encodeURIComponent(selectedDate)}/download`
-      );
-
-      if (!response.ok) {
-        throw new Error(`Report download failed: ${response.status}`);
-      }
+      const response = await apiFetch(`/api/reports/${encodeURIComponent(selectedDate)}/download`);
+      if (!response.ok) throw new Error(`Report download failed: ${response.status}`);
 
       const markdown = await response.text();
-
-      if (markdown.trimStart().startsWith("<!doctype html") ||
-          markdown.trimStart().startsWith("<html")) {
+      const head = markdown.trimStart();
+      if (head.startsWith("<!doctype html") || head.startsWith("<html")) {
         throw new Error("The server returned HTML instead of Markdown.");
       }
 
-      const blob = new Blob([markdown], {
-        type: "text/markdown;charset=utf-8",
-      });
-
-      const url = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(new Blob([markdown], { type: "text/markdown;charset=utf-8" }));
       const link = document.createElement("a");
-
       link.href = url;
       link.download = `${selectedDate}.md`;
       document.body.appendChild(link);
       link.click();
       link.remove();
-
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to download Markdown report."
-      );
+      setError(err instanceof Error ? err.message : "Unable to export the report.");
     }
   }
+
   const applications = report
-    ? Object.entries(report.application_usage).sort(
-        (a, b) => b[1] - a[1]
-      )
+    ? Object.entries(report.application_usage).sort((a, b) => b[1] - a[1])
+    : [];
+  const maxApp = applications[0]?.[1] ?? 0;
+  const visibleApps = showAllApps ? applications : applications.slice(0, TOP_APPS);
+  const projects = report ? Object.entries(report.projects) : [];
+
+  const stats = report
+    ? [
+        { label: "Tracked", value: formatDuration(report.total_tracked_seconds) },
+        { label: "Sessions", value: String(report.activity_count) },
+        { label: "Check-ins", value: String(report.checkin_count) },
+        { label: "Projects", value: String(projects.length) },
+      ]
     : [];
 
-  const projects = report
-    ? Object.entries(report.projects)
-    : [];
+  const empty = report && report.total_tracked_seconds === 0 && projects.length === 0;
 
   return (
-    <div className="space-y-4">
-
-      
-    <div className="flex flex-wrap items-center justify-between gap-4">
-    <div className="flex items-center gap-4">
-        <label
-        htmlFor="report-date"
-        className="flex items-center gap-2 text-sm text-[var(--dx-body)]"
+    <div className="mx-auto max-w-[880px] space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <DateNav value={selectedDate} onChange={setSelectedDate} />
+        <button
+          type="button"
+          disabled={loading || !report}
+          onClick={() => void downloadMarkdown()}
+          className="ui-btn h-8 px-4 text-[13px] disabled:opacity-40"
         >
-        <CalendarDays size={18} />
-        Select date
-        </label>
-
-        <input
-        id="report-date"
-        type="date"
-        value={selectedDate}
-        onChange={(event) => setSelectedDate(event.target.value)}
-        className="ui-input w-auto"
-        />
-    </div>
-
-   <button
-      type="button"
-      disabled={loading || !report}
-      onClick={() => void downloadMarkdown()}
-      className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-[var(--dx-accent-contrast)] ${
-        loading || !report
-          ? "cursor-not-allowed bg-[var(--dx-disabled)] opacity-50"
-          : "bg-[var(--dx-accent)] hover:bg-[var(--dx-accent-hover)]"
-      }`}
-    >
-      <Download size={18} />
-      Download Markdown
-    </button>
-    </div>
-
-      {loading && (
-        <p className="text-[var(--dx-muted)]">
-          Generating daily report...
-        </p>
-      )}
+          Export Markdown
+        </button>
+      </div>
 
       {error && (
-        <p role="alert" className="text-[var(--dx-danger)]">
+        <p role="alert" className="px-1 text-[13px] text-[var(--dx-danger)]">
           {error}
         </p>
       )}
 
-      {!loading && report && (
+      {loading ? (
+        <p className="px-1 text-[13px] text-[var(--ui-tertiary)]">Loading…</p>
+      ) : !report ? null : empty ? (
+        <div className="py-16 text-center">
+          <p className="text-[15px] font-medium">Nothing recorded</p>
+          <p className="mt-1 text-[13px] text-[var(--ui-secondary)]">
+            There’s no tracked activity or check-ins for this day.
+          </p>
+        </div>
+      ) : (
         <>
-          <section className="grid grid-cols-2 gap-px overflow-hidden rounded-[14px] bg-[var(--ui-hairline)] xl:grid-cols-4">
-            {[
-              {
-                label: "Tracked Time",
-                value: formatDuration(report.total_tracked_seconds),
-                icon: Clock3,
-              },
-              {
-                label: "Activities",
-                value: String(report.activity_count),
-                icon: FileText,
-              },
-              {
-                label: "Check-ins",
-                value: String(report.checkin_count),
-                icon: FileText,
-              },
-              {
-                label: "Projects",
-                value: String(projects.length),
-                icon: FolderKanban,
-              },
-            ].map((item) => {
-              const Icon = item.icon;
-
-              return (
-                <div
-                  key={item.label}
-                  className="bg-[var(--dx-surface)] px-4 py-3"
-                >
-                  <div className="flex items-center gap-2 text-[var(--dx-muted)]">
-                    <Icon size={15} />
-                    <span className="text-[11px]">{item.label}</span>
-                  </div>
-
-                  <p className="mt-2 text-[16px] font-semibold">
-                    {item.value}
-                  </p>
-                </div>
-              );
-            })}
+          <section className="ui-card grid grid-cols-2 !p-0 sm:grid-cols-4">
+            {stats.map((s, i) => (
+              <div
+                key={s.label}
+                className={[
+                  "px-5 py-4",
+                  i % 2 === 1 ? "border-l border-[var(--ui-hairline)]" : "",
+                  i >= 2 ? "border-t border-[var(--ui-hairline)] sm:border-t-0" : "",
+                  i === 2 ? "sm:border-l" : "",
+                ].join(" ")}
+              >
+                <p className="text-[12px] text-[var(--ui-secondary)]">{s.label}</p>
+                <p className="mt-0.5 text-[22px] font-semibold tracking-[-0.02em] tabular-nums">{s.value}</p>
+              </div>
+            ))}
           </section>
 
-          <section className="ui-card p-6">
-            <h2 className="mb-5 text-sm font-semibold">
-              Application Usage
-            </h2>
+          {applications.length > 0 && (
+            <section>
+              <h2 className="mb-2 px-1 text-[13px] font-medium text-[var(--ui-secondary)]">Apps</h2>
+              <ul className="ui-card space-y-3.5 px-5 py-4">
+                {visibleApps.map(([name, seconds]) => (
+                  <li key={name}>
+                    <div className="mb-1 flex items-baseline justify-between gap-4">
+                      <span className="truncate text-[14px] text-[var(--dx-heading)]" title={name}>
+                        {name}
+                      </span>
+                      <span className="shrink-0 text-[13px] tabular-nums text-[var(--ui-secondary)]">
+                        {formatDuration(seconds)}
+                      </span>
+                    </div>
+                    <div className="h-1 overflow-hidden rounded-full bg-[var(--ui-fill-strong)]">
+                      <div
+                        className="h-full rounded-full bg-[var(--dx-accent)]"
+                        style={{ width: `${maxApp ? (seconds / maxApp) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </li>
+                ))}
+                {applications.length > TOP_APPS && (
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => setShowAllApps((v) => !v)}
+                      className="text-[13px] font-medium text-[var(--dx-accent-text)] hover:opacity-75"
+                    >
+                      {showAllApps ? "Show less" : `Show all ${applications.length}`}
+                    </button>
+                  </li>
+                )}
+              </ul>
+            </section>
+          )}
 
-            {applications.length === 0 ? (
-              <p className="text-sm text-[var(--dx-muted)]">
-                No application activity recorded.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {applications.map(([name, seconds]) => (
-                  <div
-                    key={name}
-                    className="flex items-center justify-between gap-4 border-b border-[var(--dx-border)] pb-3"
-                  >
-                    <span className="break-all text-sm text-[var(--dx-body)]">
-                      {name}
-                    </span>
-
-                    <span className="shrink-0 text-sm font-medium text-[var(--dx-accent-text)]">
-                      {formatDuration(seconds)}
-                    </span>
-                  </div>
+          {projects.length > 0 && (
+            <section>
+              <h2 className="mb-2 px-1 text-[13px] font-medium text-[var(--ui-secondary)]">Projects</h2>
+              <div className="ui-card divide-y divide-[var(--ui-hairline)] !p-0">
+                {projects.map(([name, details]) => (
+                  <article key={name} className="px-5 py-4">
+                    <p className="flex flex-wrap items-baseline gap-x-2">
+                      <span className="text-[15px] font-semibold">{name}</span>
+                      <span className="text-[12px] text-[var(--ui-secondary)]">{details.categories.join(" · ")}</span>
+                    </p>
+                    <ul className="mt-2 space-y-1.5">
+                      {details.work.map((item, index) => (
+                        <li key={index} className="flex gap-2.5 text-[14px] leading-relaxed text-[var(--dx-body)]">
+                          <span className="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-[var(--ui-tertiary)]" />
+                          <span className="whitespace-pre-wrap">{item}</span>
+                        </li>
+                      ))}
+                      {details.blockers.map((item, index) => (
+                        <li key={`b-${index}`} className="flex gap-2.5 text-[14px] leading-relaxed text-[var(--dx-warning)]">
+                          <span className="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-[var(--dx-warning)]" />
+                          <span className="whitespace-pre-wrap">Blocked: {item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </article>
                 ))}
               </div>
-            )}
-          </section>
-
-          <section className="space-y-4">
-            <h2 className="text-[17px] font-semibold tracking-[-0.02em]">
-              Project Work
-            </h2>
-
-            {projects.length === 0 ? (
-              <div className="ui-card p-6 text-[var(--dx-muted)]">
-                No project check-ins recorded for this date.
-              </div>
-            ) : (
-              projects.map(([name, details]) => (
-                <article
-                  key={name}
-                  className="ui-card p-6"
-                >
-                  <h3 className="text-sm font-semibold">
-                    {name}
-                  </h3>
-
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {details.categories.map((category) => (
-                      <span
-                        key={category}
-                        className="rounded-full bg-[var(--dx-accent-soft)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--dx-accent-text)]"
-                      >
-                        {category}
-                      </span>
-                    ))}
-                  </div>
-
-                  <h4 className="mt-5 text-sm font-medium text-[var(--dx-body)]">
-                    Work recorded
-                  </h4>
-
-                  <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-[var(--dx-muted)]">
-                    {details.work.map((item, index) => (
-                      <li key={index}>{item}</li>
-                    ))}
-                  </ul>
-
-                  {details.blockers.length > 0 && (
-                    <>
-                      <h4 className="mt-5 text-sm font-medium text-[var(--dx-warning)]">
-                        Blockers
-                      </h4>
-
-                      <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-[var(--dx-warning)]">
-                        {details.blockers.map((item, index) => (
-                          <li key={index}>{item}</li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                </article>
-              ))
-            )}
-          </section>
+            </section>
+          )}
         </>
       )}
     </div>

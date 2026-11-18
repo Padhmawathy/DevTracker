@@ -8,7 +8,7 @@ import Calendar from "./pages/Calendar";
 import Tasks from "./pages/Tasks";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
-import { apiFetch, submitReminderAction, getDeveloperProfile, type DeveloperProfile } from "./services/api";
+import { apiFetch, submitReminderAction, getDeveloperProfile, getTasks, type DeveloperProfile, type Task } from "./services/api";
 import { listen } from "@tauri-apps/api/event";
 import { isTauri } from "@tauri-apps/api/core";
 type DailySummary = {
@@ -20,45 +20,14 @@ type DailySummary = {
   projects: Record<string, unknown>;
 };
 
-const PAGE_INFO: Record<
-  Page,
-  { title: string; subtitle: string; eyebrow: string }
-> = {
-  overview: {
-    title: "Overview",
-    subtitle: "A clear picture of your development day.",
-    eyebrow: "YOUR WORKSPACE",
-  },
-  tasks: {
-    title: "Tasks",
-    subtitle: "Plan, prioritise and finish your work.",
-    eyebrow: "TASKS",
-  },
-  activity: {
-    title: "Activity timeline",
-    subtitle: "A chronological record of your working sessions.",
-    eyebrow: "ACTIVITY",
-  },
-  checkins: {
-    title: "Work journal",
-    subtitle: "Capture progress, decisions and blockers.",
-    eyebrow: "CHECK-INS",
-  },
-  calendar: {
-    title: "Job calendar",
-    subtitle: "Log work and posts for each job, day by day.",
-    eyebrow: "CALENDAR",
-  },
-  reports: {
-    title: "Daily reports",
-    subtitle: "Turn recorded activity into a useful work summary.",
-    eyebrow: "REPORTS",
-  },
-  settings: {
-    title: "Settings",
-    subtitle: "Configure tracking and control your privacy.",
-    eyebrow: "PREFERENCES",
-  },
+const PAGE_TITLES: Record<Page, string> = {
+  overview: "Overview",
+  tasks: "Tasks",
+  activity: "Activity",
+  checkins: "Check-ins",
+  calendar: "Calendar",
+  reports: "Reports",
+  settings: "Settings",
 };
 
 function formatDuration(seconds: number): string {
@@ -86,92 +55,23 @@ function getTodayLabel() {
   }).format(new Date());
 }
 
-function Metric({
-  label,
-  value,
-  note,
-}: {
-  label: string;
-  value: string | number;
-  note: string;
-}) {
+function CardHeader({ title, action, onAction }: { title: string; action: string; onAction: () => void }) {
   return (
-    <div className="ui-card px-5 py-4">
-      <p className="text-[12px] font-medium text-[var(--ui-secondary)]">{label}</p>
-      <p className="mt-1.5 text-[28px] font-semibold tracking-[-0.03em] tabular-nums text-[var(--dx-heading)]">
-        {value}
-      </p>
-      <p className="mt-0.5 text-[12px] text-[var(--ui-tertiary)]">{note}</p>
+    <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-4">
+      <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-[var(--dx-heading)]">{title}</h2>
+      <button
+        type="button"
+        onClick={onAction}
+        className="text-[13px] font-medium text-[var(--dx-accent-text)] hover:opacity-75"
+      >
+        {action}
+      </button>
     </div>
   );
 }
 
-function SectionHeading({
-  title,
-  subtitle,
-  action,
-}: {
-  title: string;
-  subtitle: string;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-wrap items-start justify-between gap-3 px-5 pb-3 pt-5">
-      <div>
-        <h2 className="text-[17px] font-semibold tracking-[-0.02em] text-[var(--dx-heading)]">
-          {title}
-        </h2>
-        <p className="mt-0.5 text-[12px] text-[var(--ui-secondary)]">{subtitle}</p>
-      </div>
-      {action}
-    </div>
-  );
-}
-
-function TextLink({
-  children,
-  onClick,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="text-[13px] font-medium text-[var(--dx-accent-text)] hover:opacity-75"
-    >
-      {children}
-    </button>
-  );
-}
-
-function EmptyState({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="flex min-h-[180px] flex-col items-center justify-center px-6 pb-6 text-center">
-      <p className="text-[14px] font-medium text-[var(--dx-heading)]">{title}</p>
-      <p className="mt-1 max-w-[280px] text-[12px] leading-5 text-[var(--ui-secondary)]">
-        {description}
-      </p>
-    </div>
-  );
-}
-const DEVELOPER_ROLE_LABELS: Record<string, string> = {
-  frontend: "Frontend Developer",
-  backend: "Backend Developer",
-  fullstack: "Full-stack Developer",
-  mobile: "Mobile Developer",
-  devops: "DevOps Engineer",
-};
-
-function getDeveloperRoleLabel(role: string): string {
-  return DEVELOPER_ROLE_LABELS[role] ?? role;
+function Empty({ children }: { children: React.ReactNode }) {
+  return <p className="px-5 pb-6 pt-3 text-[13px] text-[var(--ui-tertiary)]">{children}</p>;
 }
 
 function Overview({
@@ -183,6 +83,7 @@ function Overview({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [profile, setProfile] = useState<DeveloperProfile | null>(null);
+  const [tasks, setTasks] = useState<Task[] | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -193,6 +94,14 @@ function Overview({
       })
       .catch((error) => {
         console.error("Unable to load developer profile:", error);
+      });
+
+    getTasks()
+      .then((data) => {
+        if (mounted) setTasks(data);
+      })
+      .catch(() => {
+        if (mounted) setTasks([]);
       });
 
     return () => {
@@ -231,10 +140,7 @@ function Overview({
           } catch (err) {
             if (controller.signal.aborted) return;
 
-            if (
-              err instanceof Error &&
-              err.message.startsWith("HTTP ")
-            ) {
+            if (err instanceof Error && err.message.startsWith("HTTP ")) {
               throw err;
             }
 
@@ -250,9 +156,9 @@ function Overview({
       } catch {
         if (!controller.signal.aborted) {
           if (initialLoad) {
-            setError("Could not load today's summary.");
+            setError("Could not load today’s summary.");
           } else {
-            console.warn("Could not refresh today's summary.");
+            console.warn("Could not refresh today’s summary.");
           }
         }
       } finally {
@@ -262,250 +168,158 @@ function Overview({
       }
     }
 
-  async function refreshLoop(initialLoad: boolean) {
-    await loadSummary(initialLoad);
+    async function refreshLoop(initialLoad: boolean) {
+      await loadSummary(initialLoad);
 
-    if (!controller.signal.aborted) {
-      refreshTimer = setTimeout(() => {
-        void refreshLoop(false);
-      }, 30000);
+      if (!controller.signal.aborted) {
+        refreshTimer = setTimeout(() => {
+          void refreshLoop(false);
+        }, 30000);
+      }
     }
-  }
 
-  void refreshLoop(true);
+    void refreshLoop(true);
 
-  return () => {
-    controller.abort();
+    return () => {
+      controller.abort();
 
-    if (refreshTimer !== undefined) {
-      clearTimeout(refreshTimer);
-    }
-  };
-}, []);
+      if (refreshTimer !== undefined) {
+        clearTimeout(refreshTimer);
+      }
+    };
+  }, []);
 
-
-  const usage = Object.entries(summary?.application_usage ?? {})
-    .sort((a, b) => b[1] - a[1]);
-
+  const usage = Object.entries(summary?.application_usage ?? {}).sort((a, b) => b[1] - a[1]);
   const maxUsage = usage.length > 0 ? usage[0][1] : 0;
-  const projects = Object.keys(summary?.projects ?? {});
+  const projectCount = Object.keys(summary?.projects ?? {}).length;
+
   const goalMinutes = profile?.daily_focus_goal_minutes ?? 480;
-  const goalSeconds = goalMinutes * 60;
   const trackedSeconds = summary?.total_tracked_seconds ?? 0;
+  const focusProgress = goalMinutes > 0 ? Math.min(100, (trackedSeconds / (goalMinutes * 60)) * 100) : 0;
 
-  const focusProgress = goalSeconds > 0
-    ? Math.min(100, (trackedSeconds / goalSeconds) * 100)
-    : 0;
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const dueTasks = (tasks ?? []).filter((t) => t.status !== "done" && t.due_date && t.due_date <= todayKey);
 
-  const goalHours = goalMinutes / 60;
   const name = profile?.display_name?.trim();
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const hour = today.getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  const stats = [
+    `${summary?.activity_count ?? 0} sessions`,
+    `${summary?.checkin_count ?? 0} check-ins`,
+    `${projectCount} ${projectCount === 1 ? "project" : "projects"}`,
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-[22px] font-semibold tracking-[-0.025em] text-[var(--dx-heading)]">
-            {name ? `${greeting}, ${name}.` : `${greeting}.`}
-          </h2>
-          <p className="mt-0.5 text-[14px] text-[var(--ui-secondary)]">
-            {profile?.role?.trim()
-              ? `${getDeveloperRoleLabel(profile.role)} · Here’s your day so far.`
-              : "Here’s your day so far."}
-          </p>
+          <p className="text-[13px] font-medium text-[var(--ui-secondary)]">{getTodayLabel()}</p>
+          <h1 className="mt-0.5 text-[30px] font-bold leading-tight tracking-[-0.03em] sm:text-[34px]">
+            {name ? `${greeting}, ${name}` : greeting}
+          </h1>
         </div>
-
-        <button
-          type="button"
-          onClick={() => onNavigate("checkins")}
-          className="ui-btn-primary h-9 px-4"
-        >
-          <span className="text-[17px] leading-none">+</span>
-          New Check-in
+        <button type="button" onClick={() => onNavigate("checkins")} className="ui-btn-primary h-9 px-4">
+          New check-in
         </button>
-      </div>
+      </header>
 
       {error && (
-        <div
-          role="alert"
-          className="ui-card flex items-center gap-3 px-4 py-3 text-[13px] text-[var(--dx-heading)]"
-        >
-          <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--dx-danger)]" />
+        <p role="alert" className="text-[13px] text-[var(--dx-danger)]">
           {error}
-        </div>
+        </p>
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
-        <section className="ui-card p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[12px] font-medium text-[var(--ui-secondary)]">Daily focus goal</p>
-              <p className="mt-1.5 text-[28px] font-semibold tracking-[-0.03em] tabular-nums">
-                {formatDuration(trackedSeconds)}
-                <span className="ml-2 text-[15px] font-normal tracking-normal text-[var(--ui-secondary)]">
-                  of {goalHours.toLocaleString()}h
-                </span>
-              </p>
-            </div>
-            <span className="text-[15px] font-semibold tabular-nums text-[var(--dx-accent-text)]">
-              {Math.round(focusProgress)}%
+      <section className="ui-card p-5 sm:p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+          <p className="text-[34px] font-semibold leading-none tracking-[-0.035em] tabular-nums">
+            {loading ? "—" : formatDuration(trackedSeconds)}
+            <span className="ml-2 text-[15px] font-normal tracking-normal text-[var(--ui-secondary)]">
+              of {(goalMinutes / 60).toLocaleString()}h goal
             </span>
-          </div>
-
-          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[var(--ui-fill-strong)]">
-            <div
-              className="h-full rounded-full bg-[var(--dx-accent)] transition-all duration-700 ease-out"
-              style={{ width: `${focusProgress}%` }}
-            />
-          </div>
-
-          <p className="mt-3 text-[12px] text-[var(--ui-tertiary)]">
-            Based on today’s recorded activity.
           </p>
-        </section>
-
-        {profile && (
-          <section className="ui-card p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[12px] font-medium text-[var(--ui-secondary)]">Your stack</p>
-                <p className="mt-1.5 text-[17px] font-semibold tracking-[-0.02em]">
-                  {getDeveloperRoleLabel(profile.role)}
-                </p>
-              </div>
-              <TextLink onClick={() => onNavigate("settings")}>Edit</TextLink>
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {[profile.primary_language, profile.primary_editor]
-                .filter((value) => value?.trim())
-                .map((value, index) => (
-                  <span
-                    key={`${index}-${value}`}
-                    className="rounded-full bg-[var(--ui-fill-strong)] px-3 py-1 text-[12px] font-medium text-[var(--dx-body)]"
-                  >
-                    {value}
-                  </span>
-                ))}
-            </div>
-          </section>
-        )}
-      </div>
-
-      <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Metric
-          label="Tracked time"
-          value={loading ? "—" : formatDuration(summary?.total_tracked_seconds ?? 0)}
-          note="Today"
-        />
-        <Metric
-          label="Activities"
-          value={loading ? "—" : summary?.activity_count ?? 0}
-          note="Sessions"
-        />
-        <Metric
-          label="Check-ins"
-          value={loading ? "—" : summary?.checkin_count ?? 0}
-          note="Journal entries"
-        />
-        <Metric
-          label="Projects"
-          value={loading ? "—" : projects.length}
-          note="Documented"
-        />
+          <p className="text-[13px] text-[var(--ui-secondary)]">{loading ? "" : stats.join("  ·  ")}</p>
+        </div>
+        <div
+          className="mt-4 h-1.5 overflow-hidden rounded-full bg-[var(--ui-fill-strong)]"
+          role="progressbar"
+          aria-label="Daily focus goal"
+          aria-valuenow={Math.round(focusProgress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <div
+            className="h-full rounded-full bg-[var(--dx-accent)] transition-all duration-700 ease-out"
+            style={{ width: `${focusProgress}%` }}
+          />
+        </div>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
-        <section className="ui-card overflow-hidden">
-          <SectionHeading
-            title="Application usage"
-            subtitle="Where your time went today"
-            action={<TextLink onClick={() => onNavigate("activity")}>Timeline</TextLink>}
-          />
-
-          {usage.length === 0 ? (
-            <EmptyState
-              title={loading ? "Loading activity…" : "No activity yet"}
-              description="Application usage appears here once tracking has data."
-            />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="ui-card overflow-hidden !p-0">
+          <CardHeader title="Due today" action="Tasks" onAction={() => onNavigate("tasks")} />
+          {tasks === null ? (
+            <Empty>Loading…</Empty>
+          ) : dueTasks.length === 0 ? (
+            <Empty>Nothing due. Enjoy the clear day.</Empty>
           ) : (
-            <ul className="space-y-4 px-5 pb-5 pt-1">
-              {usage.slice(0, 7).map(([app, seconds]) => {
-                const width = maxUsage > 0 ? (seconds / maxUsage) * 100 : 0;
-
-                return (
-                  <li key={app}>
-                    <div className="mb-1.5 flex items-center justify-between gap-3">
-                      <span className="truncate text-[13px] text-[var(--dx-heading)]" title={app}>
-                        {app}
+            <ul className="px-2 pb-2">
+              {dueTasks.slice(0, 6).map((task) => (
+                <li key={task.id}>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate("tasks")}
+                    className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-left hover:bg-[var(--ui-fill)]"
+                  >
+                    <span className="h-[16px] w-[16px] shrink-0 rounded-full shadow-[inset_0_0_0_1.5px_var(--ui-tertiary)]" />
+                    <span className="min-w-0 flex-1 truncate text-[14px]">{task.title}</span>
+                    {task.due_date && task.due_date < todayKey ? (
+                      <span className="shrink-0 text-[12px] text-[var(--dx-danger)]">Overdue</span>
+                    ) : task.job_name ? (
+                      <span className="flex shrink-0 items-center gap-1.5 text-[12px] text-[var(--ui-secondary)]">
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: task.job_color ?? undefined }} />
+                        {task.job_name}
                       </span>
-                      <span className="shrink-0 text-[12px] tabular-nums text-[var(--ui-secondary)]">
-                        {formatDuration(seconds)}
-                      </span>
-                    </div>
-                    <div className="h-1 overflow-hidden rounded-full bg-[var(--ui-fill-strong)]">
-                      <div
-                        className="h-full rounded-full bg-[var(--dx-accent)]"
-                        style={{ width: `${width}%` }}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
+                    ) : null}
+                  </button>
+                </li>
+              ))}
+              {dueTasks.length > 6 && (
+                <li className="px-3 py-1.5 text-[12px] text-[var(--ui-secondary)]">+{dueTasks.length - 6} more</li>
+              )}
             </ul>
           )}
         </section>
 
-        <section className="ui-card overflow-hidden">
-          <SectionHeading
-            title="Today’s projects"
-            subtitle="From your work journal"
-            action={<TextLink onClick={() => onNavigate("checkins")}>Journal</TextLink>}
-          />
-
-          {projects.length === 0 ? (
-            <EmptyState
-              title={loading ? "Loading projects…" : "Nothing documented yet"}
-              description="Add a check-in to connect your activity to the work you’re doing."
-            />
+        <section className="ui-card overflow-hidden !p-0">
+          <CardHeader title="Top apps" action="Timeline" onAction={() => onNavigate("activity")} />
+          {usage.length === 0 ? (
+            <Empty>{loading ? "Loading…" : "No activity tracked yet today."}</Empty>
           ) : (
-            <ul className="px-2 pb-2">
-              {projects.map((project) => (
-                <li key={project}>
-                  <button
-                    type="button"
-                    onClick={() => onNavigate("checkins")}
-                    className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left transition hover:bg-[var(--ui-fill)]"
-                  >
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--dx-accent-soft)] text-[12px] font-semibold text-[var(--dx-accent-text)]">
-                      {project.charAt(0).toUpperCase()}
+            <ul className="space-y-3.5 px-5 pb-5 pt-2">
+              {usage.slice(0, 5).map(([app, seconds]) => (
+                <li key={app}>
+                  <div className="mb-1 flex items-baseline justify-between gap-3">
+                    <span className="truncate text-[14px]" title={app}>
+                      {app}
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-[14px] text-[var(--dx-heading)]">
-                      {project}
+                    <span className="shrink-0 text-[13px] tabular-nums text-[var(--ui-secondary)]">
+                      {formatDuration(seconds)}
                     </span>
-                    <span className="text-[var(--ui-tertiary)]" aria-hidden="true">›</span>
-                  </button>
+                  </div>
+                  <div className="h-1 overflow-hidden rounded-full bg-[var(--ui-fill-strong)]">
+                    <div
+                      className="h-full rounded-full bg-[var(--dx-accent)]"
+                      style={{ width: `${maxUsage > 0 ? (seconds / maxUsage) * 100 : 0}%` }}
+                    />
+                  </div>
                 </li>
               ))}
             </ul>
           )}
         </section>
       </div>
-
-      <section className="ui-card flex flex-wrap items-center justify-between gap-4 px-5 py-4">
-        <div>
-          <p className="text-[14px] font-medium text-[var(--dx-heading)]">End-of-day report</p>
-          <p className="mt-0.5 text-[12px] text-[var(--ui-secondary)]">
-            Review your tracked work and export a summary.
-          </p>
-        </div>
-
-        <button type="button" onClick={() => onNavigate("reports")} className="ui-btn h-8 px-4">
-          View Reports
-        </button>
-      </section>
     </div>
   );
 }
@@ -537,7 +351,7 @@ function getPageFromUrl(): Page {
 export default function App() {
   const [activePage, setActivePage] = useState<Page>(getPageFromUrl());
 
-  const currentPage = PAGE_INFO[activePage];
+  const pageTitle = PAGE_TITLES[activePage];
   const fitsWindow = activePage === "calendar" || activePage === "tasks";
 
   function navigate(page: Page) {
@@ -671,25 +485,17 @@ export default function App() {
                 : "pb-16 sm:pt-10",
             ].join(" ")}
           >
-            <div
-              className={[
-                "flex shrink-0 flex-wrap items-end justify-between gap-x-6 gap-y-2",
-                fitsWindow ? "mb-6" : "mb-8",
-              ].join(" ")}
-            >
-              <div>
-                <h1 className="text-[30px] font-bold leading-tight tracking-[-0.03em] sm:text-[34px]">
-                  {currentPage.title}
-                </h1>
-                <p className="mt-1 text-[15px] text-[var(--ui-secondary)]">
-                  {currentPage.subtitle}
-                </p>
-              </div>
-
-              <p className="text-[13px] font-medium text-[var(--ui-secondary)]">
-                {getTodayLabel()}
-              </p>
-            </div>
+            {/* Overview draws its own greeting header. */}
+            {activePage !== "overview" && (
+              <h1
+                className={[
+                  "shrink-0 text-[30px] font-bold leading-tight tracking-[-0.03em] sm:text-[34px]",
+                  fitsWindow ? "mb-5" : "mb-7",
+                ].join(" ")}
+              >
+                {pageTitle}
+              </h1>
+            )}
 
             <div className={fitsWindow ? "lg:min-h-0 lg:flex-1" : ""}>
               {renderPage()}
