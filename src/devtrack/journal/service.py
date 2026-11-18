@@ -1,3 +1,4 @@
+from devtrack.app_names import resolve_app_name
 
 from datetime import date
 
@@ -26,6 +27,8 @@ class DailyJournalService:
         activities = (
             self.activity_store.get_daily_timeline_grouped(day)
         )
+
+        activities = [{**activity, "display_name": resolve_app_name(activity["process_name"])} for activity in activities]
 
         checkins = (
             self.checkin_store.get_daily_checkins(day)

@@ -19,7 +19,10 @@ class TestTrackerSettingsIntegration(unittest.TestCase):
 
     def test_tracking_disabled(self):
         self.tracker.settings_store.load.return_value = (
-            TrackerSettings(tracking_enabled=False)
+            TrackerSettings(
+                tracking_enabled=False,
+                tracking_consent_granted=True,
+            )
         )
 
         result = self.tracker.apply_settings()
@@ -30,12 +33,14 @@ class TestTrackerSettingsIntegration(unittest.TestCase):
 
     def test_pause_finishes_active_session(self):
         self.tracker.settings_store.load.return_value = (
-            TrackerSettings(tracking_enabled=False)
+            TrackerSettings(
+                tracking_enabled=False,
+                tracking_consent_granted=True,
+            )
         )
 
         self.tracker.current_activity = MagicMock()
         self.tracker.last_window = ("Code.exe", "DevTracker")
-
         self.tracker.finish_activity = MagicMock()
 
         result = self.tracker.apply_settings()
@@ -47,8 +52,14 @@ class TestTrackerSettingsIntegration(unittest.TestCase):
 
     def test_resume_tracking(self):
         self.tracker.settings_store.load.side_effect = [
-            TrackerSettings(tracking_enabled=False),
-            TrackerSettings(tracking_enabled=True),
+            TrackerSettings(
+                tracking_enabled=False,
+                tracking_consent_granted=True,
+            ),
+            TrackerSettings(
+                tracking_enabled=True,
+                tracking_consent_granted=True,
+            ),
         ]
 
         paused = self.tracker.apply_settings()
@@ -60,10 +71,12 @@ class TestTrackerSettingsIntegration(unittest.TestCase):
         self.assertEqual(self.tracker.poll_interval, 1)
         self.assertEqual(self.tracker.idle_threshold, 300)
 
-    
     def test_window_titles_disabled(self):
         self.tracker.settings_store.load.return_value = (
-            TrackerSettings(collect_window_titles=False)
+            TrackerSettings(
+                collect_window_titles=False,
+                tracking_consent_granted=True,
+            )
         )
 
         self.tracker.apply_settings()
@@ -88,7 +101,10 @@ class TestTrackerSettingsIntegration(unittest.TestCase):
 
     def test_window_titles_enabled(self):
         self.tracker.settings_store.load.return_value = (
-            TrackerSettings(collect_window_titles=True)
+            TrackerSettings(
+                collect_window_titles=True,
+                tracking_consent_granted=True,
+            )
         )
 
         self.tracker.apply_settings()
@@ -106,7 +122,6 @@ class TestTrackerSettingsIntegration(unittest.TestCase):
             "DevTracker.py",
         )
 
-    
     def test_disabling_titles_finishes_active_session(self):
         self.tracker.current_activity = MagicMock()
         self.tracker.last_window = ("Code.exe", "Private.py")
@@ -114,7 +129,10 @@ class TestTrackerSettingsIntegration(unittest.TestCase):
         self.tracker.finish_activity = MagicMock()
 
         self.tracker.settings_store.load.return_value = (
-            TrackerSettings(collect_window_titles=False)
+            TrackerSettings(
+                collect_window_titles=False,
+                tracking_consent_granted=True,
+            )
         )
 
         result = self.tracker.apply_settings()
@@ -131,7 +149,10 @@ class TestTrackerSettingsIntegration(unittest.TestCase):
         self.tracker.finish_activity = MagicMock()
 
         self.tracker.settings_store.load.return_value = (
-            TrackerSettings(collect_window_titles=True)
+            TrackerSettings(
+                collect_window_titles=True,
+                tracking_consent_granted=True,
+            )
         )
 
         result = self.tracker.apply_settings()
@@ -141,10 +162,12 @@ class TestTrackerSettingsIntegration(unittest.TestCase):
         self.assertIsNone(self.tracker.last_window)
         self.assertTrue(self.tracker.collect_window_titles)
 
-    
     def test_poll_gap_adjusts_to_settings(self):
         self.tracker.settings_store.load.return_value = (
-            TrackerSettings(poll_interval=12)
+            TrackerSettings(
+                poll_interval=12,
+                tracking_consent_granted=True,
+            )
         )
 
         self.tracker.apply_settings()
@@ -154,12 +177,48 @@ class TestTrackerSettingsIntegration(unittest.TestCase):
 
     def test_poll_gap_default(self):
         self.tracker.settings_store.load.return_value = (
-            TrackerSettings(poll_interval=1)
+            TrackerSettings(
+                poll_interval=1,
+                tracking_consent_granted=True,
+            )
         )
 
         self.tracker.apply_settings()
 
         self.assertEqual(self.tracker.max_poll_gap, 10)
+
+    def test_consent_required_for_tracking(self):
+        self.tracker.settings_store.load.return_value = (
+            TrackerSettings(
+                tracking_enabled=True,
+                tracking_consent_granted=False,
+            )
+        )
+
+        result = self.tracker.apply_settings()
+
+        self.assertFalse(result)
+        self.assertIsNone(self.tracker.current_activity)
+
+    def test_revoking_consent_finishes_active_session(self):
+        self.tracker.current_activity = MagicMock()
+        self.tracker.last_window = ("Code.exe", "Private.py")
+        self.tracker.finish_activity = MagicMock()
+
+        self.tracker.settings_store.load.return_value = (
+            TrackerSettings(
+                tracking_enabled=True,
+                tracking_consent_granted=False,
+            )
+        )
+
+        result = self.tracker.apply_settings()
+
+        self.assertFalse(result)
+        self.tracker.finish_activity.assert_called_once()
+        self.assertIsNone(self.tracker.current_activity)
+        self.assertIsNone(self.tracker.last_window)
+
 
 if __name__ == "__main__":
     unittest.main()

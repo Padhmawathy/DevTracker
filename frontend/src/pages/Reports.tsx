@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { getDailyReport, type DailySummary } from "../services/api";
+import { apiFetch, getDailyReport, type DailySummary } from "../services/api";
 import {
   CalendarDays,
   Clock3,
@@ -67,6 +67,49 @@ export default function Reports() {
     };
   }, [selectedDate]);
 
+  async function downloadMarkdown() {
+    if (loading || !report) return;
+
+    try {
+      setError("");
+
+      const response = await apiFetch(
+        `/api/reports/${encodeURIComponent(selectedDate)}/download`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Report download failed: ${response.status}`);
+      }
+
+      const markdown = await response.text();
+
+      if (markdown.trimStart().startsWith("<!doctype html") ||
+          markdown.trimStart().startsWith("<html")) {
+        throw new Error("The server returned HTML instead of Markdown.");
+      }
+
+      const blob = new Blob([markdown], {
+        type: "text/markdown;charset=utf-8",
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = `${selectedDate}.md`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to download Markdown report."
+      );
+    }
+  }
   const applications = report
     ? Object.entries(report.application_usage).sort(
         (a, b) => b[1] - a[1]
@@ -78,14 +121,14 @@ export default function Reports() {
     : [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
 
       
     <div className="flex flex-wrap items-center justify-between gap-4">
     <div className="flex items-center gap-4">
         <label
         htmlFor="report-date"
-        className="flex items-center gap-2 text-sm text-[#c3ccc5]"
+        className="flex items-center gap-2 text-sm text-[var(--dx-body)]"
         >
         <CalendarDays size={18} />
         Select date
@@ -96,43 +139,40 @@ export default function Reports() {
         type="date"
         value={selectedDate}
         onChange={(event) => setSelectedDate(event.target.value)}
-        className="rounded-lg border border-[#39413d] bg-[#202424] px-3 py-2 text-[#f0f2ee] [color-scheme:dark]"
+        className="ui-input w-auto"
         />
     </div>
 
-    <a
-        href={`/api/reports/${encodeURIComponent(selectedDate)}/download`}
-        download={`${selectedDate}.md`}
-        aria-disabled={loading || !report}
-        onClick={(event) => {
-        if (loading || !report) event.preventDefault();
-        }}
-        className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-[#17231b] ${
+   <button
+      type="button"
+      disabled={loading || !report}
+      onClick={() => void downloadMarkdown()}
+      className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-[var(--dx-accent-contrast)] ${
         loading || !report
-            ? "cursor-not-allowed bg-[#333b38] opacity-50"
-            : "bg-[#a7c9b4] hover:bg-[#bdd9c7]"
-        }`}
+          ? "cursor-not-allowed bg-[var(--dx-disabled)] opacity-50"
+          : "bg-[var(--dx-accent)] hover:bg-[var(--dx-accent-hover)]"
+      }`}
     >
-        <Download size={18} />
-        Download Markdown
-    </a>
+      <Download size={18} />
+      Download Markdown
+    </button>
     </div>
 
       {loading && (
-        <p className="text-[#929c95]">
+        <p className="text-[var(--dx-muted)]">
           Generating daily report...
         </p>
       )}
 
       {error && (
-        <p role="alert" className="text-[#f1aaa5]">
+        <p role="alert" className="text-[var(--dx-danger)]">
           {error}
         </p>
       )}
 
       {!loading && report && (
         <>
-          <section className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-[#2b2f30] bg-[#2b2f30] xl:grid-cols-4">
+          <section className="grid grid-cols-2 gap-px overflow-hidden rounded-[14px] bg-[var(--ui-hairline)] xl:grid-cols-4">
             {[
               {
                 label: "Tracked Time",
@@ -160,14 +200,14 @@ export default function Reports() {
               return (
                 <div
                   key={item.label}
-                  className="bg-[#1c1f20] p-5"
+                  className="bg-[var(--dx-surface)] px-4 py-3"
                 >
-                  <div className="flex items-center gap-2 text-[#929c95]">
-                    <Icon size={18} />
-                    <span className="text-sm">{item.label}</span>
+                  <div className="flex items-center gap-2 text-[var(--dx-muted)]">
+                    <Icon size={15} />
+                    <span className="text-[11px]">{item.label}</span>
                   </div>
 
-                  <p className="mt-3 text-2xl font-bold">
+                  <p className="mt-2 text-[16px] font-semibold">
                     {item.value}
                   </p>
                 </div>
@@ -175,13 +215,13 @@ export default function Reports() {
             })}
           </section>
 
-          <section className="rounded-lg border border-[#2b2f30] bg-[#1c1f20] p-6">
+          <section className="ui-card p-6">
             <h2 className="mb-5 text-sm font-semibold">
               Application Usage
             </h2>
 
             {applications.length === 0 ? (
-              <p className="text-sm text-[#929c95]">
+              <p className="text-sm text-[var(--dx-muted)]">
                 No application activity recorded.
               </p>
             ) : (
@@ -189,13 +229,13 @@ export default function Reports() {
                 {applications.map(([name, seconds]) => (
                   <div
                     key={name}
-                    className="flex items-center justify-between gap-4 border-b border-[#2b2f30] pb-3"
+                    className="flex items-center justify-between gap-4 border-b border-[var(--dx-border)] pb-3"
                   >
-                    <span className="break-all text-sm text-[#c3ccc5]">
+                    <span className="break-all text-sm text-[var(--dx-body)]">
                       {name}
                     </span>
 
-                    <span className="shrink-0 text-sm font-medium text-[#aacbb6]">
+                    <span className="shrink-0 text-sm font-medium text-[var(--dx-accent-text)]">
                       {formatDuration(seconds)}
                     </span>
                   </div>
@@ -205,19 +245,19 @@ export default function Reports() {
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-sm font-semibold">
+            <h2 className="text-[17px] font-semibold tracking-[-0.02em]">
               Project Work
             </h2>
 
             {projects.length === 0 ? (
-              <div className="rounded-lg border border-[#2b2f30] bg-[#1c1f20] p-6 text-[#929c95]">
+              <div className="ui-card p-6 text-[var(--dx-muted)]">
                 No project check-ins recorded for this date.
               </div>
             ) : (
               projects.map(([name, details]) => (
                 <article
                   key={name}
-                  className="rounded-lg border border-[#2b2f30] bg-[#1c1f20] p-6"
+                  className="ui-card p-6"
                 >
                   <h3 className="text-sm font-semibold">
                     {name}
@@ -227,18 +267,18 @@ export default function Reports() {
                     {details.categories.map((category) => (
                       <span
                         key={category}
-                        className="rounded-md border border-[#3a4a40] bg-[#a7c9b4]/10 px-2 py-1 text-xs text-[#c4d9ca]"
+                        className="rounded-full bg-[var(--dx-accent-soft)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--dx-accent-text)]"
                       >
                         {category}
                       </span>
                     ))}
                   </div>
 
-                  <h4 className="mt-5 text-sm font-medium text-[#c3ccc5]">
+                  <h4 className="mt-5 text-sm font-medium text-[var(--dx-body)]">
                     Work recorded
                   </h4>
 
-                  <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-[#929c95]">
+                  <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-[var(--dx-muted)]">
                     {details.work.map((item, index) => (
                       <li key={index}>{item}</li>
                     ))}
@@ -246,11 +286,11 @@ export default function Reports() {
 
                   {details.blockers.length > 0 && (
                     <>
-                      <h4 className="mt-5 text-sm font-medium text-[#e6bc82]">
+                      <h4 className="mt-5 text-sm font-medium text-[var(--dx-warning)]">
                         Blockers
                       </h4>
 
-                      <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-[#d8ba8c]">
+                      <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-[var(--dx-warning)]">
                         {details.blockers.map((item, index) => (
                           <li key={index}>{item}</li>
                         ))}

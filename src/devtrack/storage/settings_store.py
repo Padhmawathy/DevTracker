@@ -1,14 +1,18 @@
 
+from importlib.resources import path
 import json
 from pathlib import Path
-
+from devtrack.config.paths import get_data_path
 from devtrack.models.settings import TrackerSettings
 
 
 class JSONSettingsStore:
-    def __init__(self, path="data/settings.json"):
-        self.path = Path(path)
-
+    def __init__(self, path=None):
+        self.path = (
+            Path(path)
+            if path is not None
+            else get_data_path("settings.json")
+        )
     def load(self):
         if not self.path.exists():
             return TrackerSettings()

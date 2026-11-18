@@ -1,0 +1,292 @@
+/* Job calendar — minimal, Apple-style. Built on the app theme tokens so it
+   follows light/dark and the user's chosen appearance. */
+
+.cal {
+  --cal-hairline: var(--ui-hairline);
+  --cal-fill: var(--ui-fill);
+  --cal-fill-strong: var(--ui-fill-strong);
+  --cal-secondary: var(--ui-secondary);
+  --cal-tertiary: var(--ui-tertiary);
+  --cal-radius: 16px;
+
+  color: var(--dx-heading);
+}
+
+.cal-card {
+  background: var(--dx-surface);
+  border-radius: var(--cal-radius);
+  box-shadow: var(--ui-shadow);
+}
+
+.cal-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.cal-section-title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.cal-caption {
+  font-size: 12px;
+  color: var(--cal-secondary);
+}
+
+.cal-eyebrow {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--cal-secondary);
+}
+
+/* ---------- buttons ---------- */
+
+.cal-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--cal-fill);
+  color: var(--dx-heading);
+  transition: background 0.15s ease;
+}
+.cal-pill:hover { background: var(--cal-fill-strong); }
+.cal-pill:disabled { opacity: 0.4; }
+
+.cal-pill-primary {
+  background: var(--dx-accent);
+  color: var(--dx-accent-contrast);
+}
+.cal-pill-primary:hover { background: var(--dx-accent-hover); }
+
+.cal-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  color: var(--cal-secondary);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.cal-icon-btn:hover {
+  background: var(--cal-fill);
+  color: var(--dx-heading);
+}
+
+.cal-link-btn {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dx-accent-text);
+}
+.cal-link-btn:hover { opacity: 0.75; }
+.cal-link-btn.is-danger { color: var(--dx-danger); }
+
+
+/* ---------- segmented control ---------- */
+
+.cal-segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--cal-fill-strong);
+}
+.cal-segmented button {
+  height: 26px;
+  padding: 0 11px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--cal-secondary);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.cal-segmented button:hover { color: var(--dx-heading); }
+.cal-segmented button[aria-pressed="true"] {
+  background: var(--dx-surface);
+  color: var(--dx-heading);
+  box-shadow:
+    0 0 0 0.5px var(--cal-hairline),
+    0 1px 3px color-mix(in srgb, #000 10%, transparent);
+}
+
+/* ---------- inputs ---------- */
+
+.cal-select {
+  appearance: none;
+  height: 30px;
+  padding: 0 28px 0 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dx-heading);
+  background-color: var(--cal-fill);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1 1 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+}
+.cal-select option { background: var(--dx-surface); color: var(--dx-heading); }
+
+/* iOS-style inset grouped list */
+.cal-group {
+  border-radius: 12px;
+  background: var(--cal-fill);
+  overflow: hidden;
+}
+.cal-group > * + * {
+  box-shadow: inset 0 0.5px 0 var(--cal-hairline);
+}
+/* Fixed-size lists: content scrolls inside instead of growing the panel.
+   Declared after .cal-group so it overrides its overflow: hidden. */
+.cal-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.cal-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 14px;
+}
+.cal-row-label {
+  flex-shrink: 0;
+  width: 76px;
+  font-size: 13px;
+  color: var(--cal-secondary);
+}
+.cal-field {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 11px 0;
+  font-size: 14px;
+  color: var(--dx-heading);
+  background: transparent;
+  outline: none;
+}
+.cal-field::placeholder { color: var(--cal-tertiary); }
+textarea.cal-field { resize: none; line-height: 1.45; }
+select.cal-field { appearance: none; cursor: pointer; }
+select.cal-field option { background: var(--dx-surface); }
+.cal .cal-field:focus-visible { outline: none; }
+.cal-row:focus-within { background: var(--cal-fill); }
+
+/* ---------- month grid ---------- */
+
+.cal-weekday {
+  padding: 0 6px 6px;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: left;
+  color: var(--cal-secondary);
+}
+
+.cal-day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 52px;
+  padding: 4px 4px 6px;
+  text-align: left;
+  box-shadow: inset 0 0.5px 0 var(--cal-hairline);
+  transition: background 0.12s ease;
+}
+@media (min-width: 640px) {
+  .cal-day { min-height: 76px; }
+}
+/* Desktop: the grid fills the available height; days shrink with the
+   window and clip instead of growing the row. */
+@media (min-width: 1024px) {
+  .cal-grid-fit .cal-day {
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+.cal-day:hover { background: var(--cal-fill); }
+.cal-day.is-outside .cal-daynum { color: var(--cal-tertiary); }
+.cal-day.is-weekend { background: color-mix(in srgb, var(--dx-heading) 1.5%, transparent); }
+.cal-day.is-weekend:hover { background: var(--cal-fill); }
+
+.cal-daynum {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.cal-day.is-selected .cal-daynum {
+  background: var(--dx-heading);
+  color: var(--dx-surface);
+  font-weight: 600;
+}
+.cal-day.is-today .cal-daynum {
+  background: var(--dx-danger);
+  color: #fff;
+  font-weight: 600;
+}
+
+.cal-event {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--dx-heading);
+}
+.cal-event-dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+}
+.cal-event.is-planned { color: var(--cal-secondary); }
+.cal-event.is-planned .cal-event-dot {
+  background: transparent !important;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+
+/* ---------- day inspector ---------- */
+
+.cal-entry {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+}
+.cal-entry-bar {
+  flex-shrink: 0;
+  width: 3px;
+  border-radius: 999px;
+}
+.cal-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--cal-fill-strong);
+  color: var(--cal-secondary);
+}

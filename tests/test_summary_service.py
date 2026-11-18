@@ -59,10 +59,10 @@ class TestDailySummaryService(unittest.TestCase):
         summary = self.service.generate(self.day)
 
         self.assertEqual(
-            summary["application_usage"]["Code.exe"], 180
+            summary["application_usage"]["Visual Studio Code"], 180
         )
         self.assertEqual(
-            summary["application_usage"]["brave.exe"], 30
+            summary["application_usage"]["Brave Browser"], 30
         )
 
     def test_project_work(self):

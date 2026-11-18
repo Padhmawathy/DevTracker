@@ -7,6 +7,7 @@ from datetime import time
 class TrackerSettings:
     # Existing tracking settings
     tracking_enabled: bool = True
+    tracking_consent_granted: bool = False
     poll_interval: int = 1
     idle_threshold: int = 300
     min_activity_duration: int = 2

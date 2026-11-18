@@ -1,11 +1,13 @@
-
+import sys
 from fastapi import FastAPI
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
-
+from fastapi.middleware.cors import CORSMiddleware
 from devtrack.models.profile import DeveloperProfile
 from devtrack.storage.profile_store import JSONDeveloperProfileStore
-
+import hmac
+from fastapi import Request
+from fastapi.responses import JSONResponse
 from devtrack.summary.service import DailySummaryService
 from pydantic import BaseModel, Field
 from devtrack.models.checkin import DeveloperCheckIn
@@ -19,6 +21,57 @@ from devtrack.summary.formatter import MarkdownSummaryFormatter
 from devtrack.models.settings import TrackerSettings
 from devtrack.storage.settings_store import JSONSettingsStore
 
+from devtrack.models.app_category import AppCategoryRule
+from devtrack.storage.app_category_store import JSONAppCategoryStore
+from devtrack.reminders.action_queue import ReminderActionQueue
+from devtrack.storage.job_store import (
+    DuplicateJobError,
+    JobNotFoundError,
+    SQLiteJobStore,
+    WorkEntryNotFoundError,
+)
+from typing import Literal
+
+app = FastAPI(
+    title="DevTracker API",
+    version="0.5.0",
+)
+
+# Allow the packaged DevTrack Windows frontend.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://tauri.localhost"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT"],
+    allow_headers=["Content-Type", "X-DevTrack-Token"],
+)
+
+
+@app.middleware("http")
+async def require_desktop_auth(request: Request, call_next):
+    expected_token = getattr(app.state, "desktop_api_token", None)
+
+    # Development mode uses the separately started backend.
+    if expected_token is None:
+        return await call_next(request)
+
+    if request.method == "OPTIONS":
+        return await call_next(request)
+
+    if request.url.path.startswith("/api/"):
+        supplied_token = request.headers.get(
+            "X-DevTrack-Token", ""
+        )
+
+        if not hmac.compare_digest(
+            supplied_token, expected_token
+        ):
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Unauthorized"},
+            )
+
+    return await call_next(request)
 
 class CheckInRequest(BaseModel):
     project_name: str = Field(min_length=1)
@@ -26,22 +79,18 @@ class CheckInRequest(BaseModel):
     category: str = "Other"
     blocker: str | None = None
 
-app = FastAPI(
-    title="DevTracker API",
-    version="0.5.0",
-)
-
+class ReminderActionRequest(BaseModel):
+    action: str
+    reminder_id: str
 
 class TrackerSettingsRequest(BaseModel):
-    # Existing tracking preferences
     tracking_enabled: bool
+    tracking_consent_granted: bool = False
     poll_interval: int
     idle_threshold: int
     min_activity_duration: int
     collect_window_titles: bool
 
-    # Smart check-in reminder preferences
-    # Defaults preserve compatibility with older API clients.
     reminders_enabled: bool = True
     reminder_interval_minutes: int = 60
     reminder_work_start: str = "09:00"
@@ -61,11 +110,44 @@ class DeveloperProfileRequest(BaseModel):
     )
 
 
+class AppCategoryRuleRequest(BaseModel):
+    app_name: str
+    category: str
+
+
+class AppCategoriesRequest(BaseModel):
+    rules: list[AppCategoryRuleRequest]
+
+
 @app.get("/api/health")
 def health():
     return {
         "status": "ok",
         "application": "DevTracker",
+    }
+
+@app.post("/api/reminders/action")
+def submit_reminder_action(payload: ReminderActionRequest):
+    if payload.action not in ("snooze", "skip"):
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid reminder action",
+        )
+
+    queue = ReminderActionQueue()
+
+    try:
+        queue._validate_reminder_id(payload.reminder_id)
+        queue.enqueue(payload.action, payload.reminder_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid reminder ID",
+        )
+
+    return {
+        "status": "queued",
+        "action": payload.action,
     }
 @app.get("/api/summary/today")
 def get_today_summary():
@@ -266,15 +348,202 @@ def update_developer_profile(payload: DeveloperProfileRequest):
 
     return profile.to_dict()
 
+
+
+@app.get("/api/app-categories")
+def get_app_categories():
+    store = JSONAppCategoryStore()
+
+    try:
+        rules = store.load()
+    except (ValueError, TypeError, OSError) as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to load application categories.",
+        ) from exc
+
+    return {
+        "rules": [
+            {
+                "app_name": rule.app_name,
+                "category": rule.category,
+            }
+            for rule in rules
+        ]
+    }
+
+
+@app.put("/api/app-categories")
+def update_app_categories(payload: AppCategoriesRequest):
+    try:
+        rules = [
+            AppCategoryRule(
+                app_name=item.app_name,
+                category=item.category,
+            )
+            for item in payload.rules
+        ]
+
+        store = JSONAppCategoryStore()
+        store.save(rules)
+
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to save application categories.",
+        ) from exc
+
+    return {
+        "rules": [
+            {
+                "app_name": rule.app_name,
+                "category": rule.category,
+            }
+            for rule in rules
+        ]
+    }
+
+# ------------------------------------------
+# Jobs and calendar work entries
+# ------------------------------------------
+
+MAX_CALENDAR_RANGE_DAYS = 400
+
+
+class JobRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    client: str | None = Field(default=None, max_length=100)
+    color: str = Field(default="#4f9d7a", pattern=r"^#[0-9a-fA-F]{6}$")
+    status: Literal["active", "archived"] = "active"
+
+
+class WorkEntryRequest(BaseModel):
+    job_id: int
+    entry_date: date
+    hours: float | None = Field(default=None, gt=0, le=24)
+    description: str = Field(min_length=1, max_length=2000)
+    status: Literal["planned", "done"] = "done"
+    platform: Literal["linkedin", "instagram", "reddit", "x", "other"] | None = None
+    link: str | None = Field(default=None, max_length=2000)
+
+
+def _job_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, JobNotFoundError):
+        return HTTPException(status_code=404, detail="Job not found.")
+    if isinstance(exc, WorkEntryNotFoundError):
+        return HTTPException(status_code=404, detail="Work entry not found.")
+    if isinstance(exc, DuplicateJobError):
+        return HTTPException(status_code=409, detail=str(exc))
+    return HTTPException(status_code=422, detail=str(exc))
+
+
+@app.get("/api/jobs")
+def list_jobs(include_archived: bool = True):
+    jobs = SQLiteJobStore().list_jobs(include_archived=include_archived)
+    return {"jobs": jobs}
+
+
+@app.post("/api/jobs", status_code=201)
+def create_job(payload: JobRequest):
+    try:
+        return SQLiteJobStore().create_job(**payload.model_dump())
+    except (ValueError, LookupError) as exc:
+        raise _job_error(exc) from exc
+
+
+@app.put("/api/jobs/{job_id}")
+def update_job(job_id: int, payload: JobRequest):
+    try:
+        return SQLiteJobStore().update_job(job_id, **payload.model_dump())
+    except (ValueError, LookupError) as exc:
+        raise _job_error(exc) from exc
+
+
+@app.get("/api/work-entries")
+def list_work_entries(start: str, end: str, job_id: int | None = None):
+    try:
+        start_day = date.fromisoformat(start)
+        end_day = date.fromisoformat(end)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid date. Use YYYY-MM-DD.",
+        )
+
+    if end_day < start_day:
+        raise HTTPException(
+            status_code=400,
+            detail="End date must be on or after start date.",
+        )
+
+    if (end_day - start_day).days > MAX_CALENDAR_RANGE_DAYS:
+        raise HTTPException(
+            status_code=400,
+            detail="Date range is too large.",
+        )
+
+    entries = SQLiteJobStore().list_entries(start_day, end_day, job_id)
+    return {
+        "start": start_day.isoformat(),
+        "end": end_day.isoformat(),
+        "entries": entries,
+    }
+
+
+@app.post("/api/work-entries", status_code=201)
+def create_work_entry(payload: WorkEntryRequest):
+    try:
+        return SQLiteJobStore().create_entry(**payload.model_dump())
+    except (ValueError, LookupError) as exc:
+        raise _job_error(exc) from exc
+
+
+@app.put("/api/work-entries/{entry_id}")
+def update_work_entry(entry_id: int, payload: WorkEntryRequest):
+    try:
+        return SQLiteJobStore().update_entry(entry_id, **payload.model_dump())
+    except (ValueError, LookupError) as exc:
+        raise _job_error(exc) from exc
+
+
+# The desktop proxy only forwards GET/POST/PUT, so deletion is a POST.
+@app.post("/api/work-entries/{entry_id}/delete")
+def delete_work_entry(entry_id: int):
+    try:
+        SQLiteJobStore().delete_entry(entry_id)
+    except LookupError as exc:
+        raise _job_error(exc) from exc
+    return {"status": "deleted", "id": entry_id}
+
+
 # ------------------------------------------
 # Serve DevTracker React production frontend
 # ------------------------------------------
 
-FRONTEND_DIST = (
-    Path(__file__).resolve().parents[3]
-    / "frontend"
-    / "dist"
-)
+def get_frontend_dist() -> Path:
+    """Locate React assets in development or PyInstaller."""
+
+    if getattr(sys, "frozen", False):
+        return (
+            Path(__file__).resolve().parents[3]
+            if not hasattr(sys, "_MEIPASS")
+            else Path(sys._MEIPASS)
+        ) / "frontend" / "dist"
+
+    return (
+        Path(__file__).resolve().parents[3]
+        / "frontend"
+        / "dist"
+    )
+
+
+FRONTEND_DIST = get_frontend_dist()
 
 if FRONTEND_DIST.is_dir():
     app.mount(

@@ -1,3 +1,54 @@
+import { invoke } from "@tauri-apps/api/core";
+
+type DesktopApiResponse = {
+  status: number;
+  body: string;
+};
+
+const IS_PACKAGED_DESKTOP =
+  window.location.hostname === "tauri.localhost";
+
+export async function apiFetch(
+  input: string,
+  init?: RequestInit
+): Promise<Response> {
+  if (!IS_PACKAGED_DESKTOP) {
+    return window.fetch(input, init);
+  }
+
+  const method = (init?.method ?? "GET").toUpperCase();
+
+  let body: unknown = undefined;
+
+  if (init?.body != null) {
+    if (typeof init.body !== "string") {
+      throw new Error(
+        "Desktop API requests must use JSON request bodies."
+      );
+    }
+
+    body = JSON.parse(init.body);
+  }
+
+  const result = await invoke<DesktopApiResponse>(
+    "desktop_api_request",
+    {
+      request: {
+        path: input,
+        method,
+        body,
+      },
+    }
+  );
+
+  return new Response(result.body, {
+    status: result.status,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+}
+
 
 // ==========================================
 // DEVTRACKER API SERVICE
@@ -25,6 +76,7 @@ export interface DailySummary {
 export interface Activity {
   id: number;
   process_name: string;
+  display_name?: string;
   process_id: number;
   window_title: string | null;
   started_at: string;
@@ -67,7 +119,7 @@ export interface DailyCheckInsResponse {
 // ==========================================
 
 export async function getTodaySummary(): Promise<DailySummary> {
-  const response = await fetch("/api/summary/today");
+  const response = await apiFetch("/api/summary/today");
 
   if (!response.ok) {
     throw new Error(
@@ -85,7 +137,7 @@ export async function getTodaySummary(): Promise<DailySummary> {
 export async function getDailyActivity(
   day: string
 ): Promise<DailyActivityResponse> {
-  const response = await fetch(
+  const response = await apiFetch(
     `/api/activity/${encodeURIComponent(day)}`
   );
 
@@ -105,7 +157,7 @@ export async function getDailyActivity(
 export async function createCheckIn(
   payload: CreateCheckInRequest
 ): Promise<DeveloperCheckIn> {
-  const response = await fetch("/api/checkins", {
+  const response = await apiFetch("/api/checkins", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -129,7 +181,7 @@ export async function createCheckIn(
 export async function getDailyCheckIns(
   day: string
 ): Promise<DailyCheckInsResponse> {
-  const response = await fetch(
+  const response = await apiFetch(
     `/api/checkins/${encodeURIComponent(day)}`
   );
 
@@ -147,7 +199,7 @@ export async function getDailyCheckIns(
 export async function getDailyReport(
   day: string
 ): Promise<DailySummary> {
-  const response = await fetch(
+  const response = await apiFetch(
     `/api/reports/${encodeURIComponent(day)}`
   );
 
@@ -165,6 +217,7 @@ export async function getDailyReport(
 export interface TrackerSettings {
   // Activity tracking
   tracking_enabled: boolean;
+  tracking_consent_granted: boolean;
   poll_interval: number;
   idle_threshold: number;
   min_activity_duration: number;
@@ -181,7 +234,7 @@ export interface TrackerSettings {
 
 
 export async function getTrackerSettings(): Promise<TrackerSettings> {
-  const response = await fetch("/api/settings");
+  const response = await apiFetch("/api/settings");
 
   if (!response.ok) {
     throw new Error("Failed to load tracker settings.");
@@ -193,7 +246,7 @@ export async function getTrackerSettings(): Promise<TrackerSettings> {
 export async function updateTrackerSettings(
   settings: TrackerSettings
 ): Promise<TrackerSettings> {
-  const response = await fetch("/api/settings", {
+  const response = await apiFetch("/api/settings", {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -219,7 +272,7 @@ export interface DeveloperProfile {
 }
 
 export async function getDeveloperProfile(): Promise<DeveloperProfile> {
-  const response = await fetch("/api/profile");
+  const response = await apiFetch("/api/profile");
 
   if (!response.ok) {
     throw new Error("Failed to load developer profile");
@@ -231,7 +284,7 @@ export async function getDeveloperProfile(): Promise<DeveloperProfile> {
 export async function updateDeveloperProfile(
   profile: DeveloperProfile
 ): Promise<DeveloperProfile> {
-  const response = await fetch("/api/profile", {
+  const response = await apiFetch("/api/profile", {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -244,4 +297,199 @@ export async function updateDeveloperProfile(
   }
 
   return response.json();
+}
+
+
+export type AppCategory =
+  | "development"
+  | "research"
+  | "testing"
+  | "design"
+  | "communication"
+  | "meetings"
+  | "personal"
+  | "other";
+
+export interface AppCategoryRule {
+  app_name: string;
+  category: AppCategory;
+}
+
+export interface AppCategoriesResponse {
+  rules: AppCategoryRule[];
+}
+
+export async function getAppCategories(): Promise<AppCategoriesResponse> {
+  const response = await apiFetch("/api/app-categories");
+
+  if (!response.ok) {
+    throw new Error("Failed to load application categories");
+  }
+
+  return (await response.json()) as AppCategoriesResponse;
+}
+
+export async function updateAppCategories(
+  rules: AppCategoryRule[]
+): Promise<AppCategoriesResponse> {
+  const response = await apiFetch("/api/app-categories", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ rules }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to save application categories");
+  }
+
+  return (await response.json()) as AppCategoriesResponse;
+}
+
+export async function submitReminderAction(
+  action: "snooze" | "skip",
+  reminderId: string
+): Promise<void> {
+  const response = await apiFetch("/api/reminders/action", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      action,
+      reminder_id: reminderId,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Reminder action failed: ${response.status}`
+    );
+  }
+}
+// ==========================================
+// JOBS & CALENDAR WORK LOG
+// ==========================================
+
+export type JobStatus = "active" | "archived";
+export type WorkEntryStatus = "planned" | "done";
+export type Platform = "linkedin" | "instagram" | "reddit" | "x" | "other";
+
+export const PLATFORM_LABELS: Record<Platform, string> = {
+  linkedin: "LinkedIn",
+  instagram: "Instagram",
+  reddit: "Reddit",
+  x: "X",
+  other: "Other",
+};
+
+export interface Job {
+  id: number;
+  name: string;
+  client: string | null;
+  color: string;
+  status: JobStatus;
+  created_at: string;
+  done_hours: number;
+  planned_hours: number;
+  entry_count: number;
+  post_count: number;
+  last_entry_date: string | null;
+}
+
+export interface JobPayload {
+  name: string;
+  client: string | null;
+  color: string;
+  status: JobStatus;
+}
+
+export interface WorkEntry {
+  id: number;
+  job_id: number;
+  job_name: string;
+  job_color: string;
+  entry_date: string;
+  hours: number | null;
+  description: string;
+  status: WorkEntryStatus;
+  platform: Platform | null;
+  link: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkEntryPayload {
+  job_id: number;
+  entry_date: string;
+  hours: number | null;
+  description: string;
+  status: WorkEntryStatus;
+  platform: Platform | null;
+  link: string | null;
+}
+
+async function readError(response: Response, fallback: string): Promise<Error> {
+  try {
+    const data = await response.json();
+    if (typeof data?.detail === "string") return new Error(data.detail);
+  } catch {
+    // ignore non-JSON bodies
+  }
+  return new Error(`${fallback} (${response.status})`);
+}
+
+async function sendJson<T>(
+  path: string,
+  method: "POST" | "PUT",
+  body: unknown,
+  fallback: string
+): Promise<T> {
+  const response = await apiFetch(path, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+  });
+  if (!response.ok) throw await readError(response, fallback);
+  return response.json();
+}
+
+export async function getJobs(): Promise<Job[]> {
+  const response = await apiFetch("/api/jobs");
+  if (!response.ok) throw await readError(response, "Failed to load jobs");
+  return (await response.json()).jobs;
+}
+
+export function createJob(payload: JobPayload): Promise<Job> {
+  return sendJson("/api/jobs", "POST", payload, "Failed to create job");
+}
+
+export function updateJob(id: number, payload: JobPayload): Promise<Job> {
+  return sendJson(`/api/jobs/${id}`, "PUT", payload, "Failed to update job");
+}
+
+export async function getWorkEntries(
+  start: string,
+  end: string
+): Promise<WorkEntry[]> {
+  const params = new URLSearchParams({ start, end });
+  const response = await apiFetch(`/api/work-entries?${params}`);
+  if (!response.ok) throw await readError(response, "Failed to load entries");
+  return (await response.json()).entries;
+}
+
+export function createWorkEntry(payload: WorkEntryPayload): Promise<WorkEntry> {
+  return sendJson("/api/work-entries", "POST", payload, "Failed to save entry");
+}
+
+export function updateWorkEntry(
+  id: number,
+  payload: WorkEntryPayload
+): Promise<WorkEntry> {
+  return sendJson(`/api/work-entries/${id}`, "PUT", payload, "Failed to save entry");
+}
+
+export async function deleteWorkEntry(id: number): Promise<void> {
+  await sendJson(`/api/work-entries/${id}/delete`, "POST", {}, "Failed to delete entry");
 }

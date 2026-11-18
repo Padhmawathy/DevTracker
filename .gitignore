@@ -35,3 +35,20 @@ __pycache__/
 data/settings.json
 
 
+# Python build artifacts
+/build/
+/dist/
+# Tauri backend executable
+/frontend/src-tauri/binaries/
+# Microsoft Store release packages and backups
+/store_release/
+/store_release_backup/
+# Temporary development backups
+/Settings.before-redesign.tsx
+/frontend/src/pages/Settings.backup.tsx
+# One-off migration and notification test scripts
+/apply_database_migration.py
+/prepare_database_migration.py
+/test_automatic_reminder.py
+/test_notification_button.py
+/test_windows_notification.py

@@ -5,13 +5,17 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from uuid import UUID, uuid4
 from devtrack.reminders.state import ReminderState
-
+from devtrack.config.paths import get_data_path
 
 class JSONReminderStateStore:
     """Persist a snoozed reminder across collector restarts."""
 
-    def __init__(self, path="data/reminder_state.json"):
-        self.path = Path(path)
+    def __init__(self, path=None):
+        self.path = (
+            Path(path)
+            if path is not None
+            else get_data_path("reminder_state.json")
+        )
 
     def save(self, state: ReminderState):
         self.path.parent.mkdir(

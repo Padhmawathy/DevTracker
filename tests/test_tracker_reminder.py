@@ -27,7 +27,7 @@ class TestTrackerReminderIntegration(unittest.TestCase):
             reminders_enabled=True,
             reminder_interval_minutes=15,
         )
-
+        self.tracker.current_settings.tracking_consent_granted = True
         self.tracker.reminder_engine = MagicMock()
         self.tracker.notifier = MagicMock()
 

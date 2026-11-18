@@ -1,6 +1,7 @@
 import time
+import time
 from datetime import datetime
-
+from threading import Event
 from devtrack.collector.idle import get_idle_seconds
 from devtrack.storage.sqlite_store import SQLiteActivityStore
 from devtrack.collector.foreground import get_active_window
@@ -44,8 +45,9 @@ class ActivityTracker:
         )
    
         self.current_activity = None
+        self.activity_has_checkpoint = False
         self.last_window = None
-
+        self.stop_event = Event()
         self.is_idle = False
         self.is_locked = False
 
@@ -53,6 +55,7 @@ class ActivityTracker:
         self.pending_lock_since = None
         self.lock_confirmation_seconds = 3
 
+        self.last_completed_poll_time = time.monotonic()
         self.last_poll_time = time.monotonic()
         self.last_poll_datetime = datetime.now()
         self.max_poll_gap = max(10, self.poll_interval * 3)
@@ -82,6 +85,7 @@ class ActivityTracker:
 
     
     def start_activity(self, window):
+        self.activity_has_checkpoint = False
         window_title = (
             window["window_title"]
             if self.collect_window_titles
@@ -123,6 +127,33 @@ class ActivityTracker:
 
         print("[UNLOCKED] Windows workstation unlocked")
 
+    def checkpoint_activity(self, now=None):
+        if self.current_activity is None:
+            return
+
+        if now is None:
+            now = datetime.now()
+
+        activity = self.current_activity
+        if now <= activity.started_at:
+            return
+
+        elapsed = (now - activity.started_at).total_seconds()
+        if elapsed < 30:
+            return
+
+        completed = Activity(
+            process_name=activity.process_name,
+            process_id=activity.process_id,
+            window_title=activity.window_title,
+            started_at=activity.started_at,
+        )
+        completed.finish(now)
+        self.store.save(completed)
+
+        activity.started_at = now
+        self.activity_has_checkpoint = True
+
     def finish_activity(self, ended_at=None):
         if not self.current_activity:
             return
@@ -139,7 +170,7 @@ class ActivityTracker:
 
         duration = self.current_activity.duration_seconds
 
-        if duration >= self.min_activity_duration:
+        if duration > 0 and (duration >= self.min_activity_duration or self.activity_has_checkpoint):
             print(
                 "[ACTIVITY END] "
                 f"{self.current_activity.process_name} | "
@@ -159,6 +190,7 @@ class ActivityTracker:
             )
 
         self.current_activity = None
+        self.activity_has_checkpoint = False
 
 
 
@@ -265,7 +297,7 @@ class ActivityTracker:
         self.min_activity_duration = settings.min_activity_duration
         self.collect_window_titles = settings.collect_window_titles
 
-        if not settings.tracking_enabled:
+        if not (settings.tracking_enabled and settings.tracking_consent_granted):
             if self.current_activity:
                 self.finish_activity()
 
@@ -317,6 +349,12 @@ class ActivityTracker:
             return
 
         settings = self.current_settings
+        if not (
+            settings.tracking_consent_granted
+            and settings.tracking_enabled
+            and settings.reminders_enabled
+        ):
+            return
 
         if self.reminder_state.pending:
             # Keep the engine clock updated, but do not
@@ -366,7 +404,7 @@ class ActivityTracker:
         if not self.reminder_state.mark_due():
             return
 
-        
+        self.reminder_state_store.save(self.reminder_state)
         sent = self.notifier.send_checkin_reminder(
             self.reminder_state.reminder_id
         )
@@ -420,6 +458,9 @@ class ActivityTracker:
             else:
                 print("[REMINDER ACTION] Skip ignored")
 
+    def stop(self):
+        """Request a graceful tracker shutdown."""
+        self.stop_event.set()
     
     def run(self):
         print("DevTrack activity tracker started.")
@@ -429,10 +470,11 @@ class ActivityTracker:
             self.reminder_action_queue = ReminderActionQueue()
             self.detect_tracking_gap()
 
-            while True:
+            while not self.stop_event.is_set():
+                self.process_reminder_actions()
                 if not self.apply_settings():
-                    self.check_reminder(active=False)
-                    time.sleep(self.poll_interval)
+                    self.last_completed_poll_time = time.monotonic()
+                    self.stop_event.wait(self.poll_interval)
                     continue
 
                 idle_seconds = get_idle_seconds()
@@ -442,7 +484,8 @@ class ActivityTracker:
 
                 if self.is_locked:
                     self.check_reminder(active=False)
-                    time.sleep(self.poll_interval)
+                    self.last_completed_poll_time = time.monotonic()
+                    self.stop_event.wait(self.poll_interval)
                     continue
 
                 if idle_seconds >= self.idle_threshold:
@@ -450,7 +493,8 @@ class ActivityTracker:
                         self.enter_idle_state()
 
                     self.check_reminder(active=False)
-                    time.sleep(self.poll_interval)
+                    self.last_completed_poll_time = time.monotonic()
+                    self.stop_event.wait(self.poll_interval)
                     continue
 
                 if self.is_idle:
@@ -460,7 +504,8 @@ class ActivityTracker:
 
                 if not window:
                     self.check_reminder(active=False)
-                    time.sleep(self.poll_interval)
+                    self.last_completed_poll_time = time.monotonic()
+                    self.stop_event.wait(self.poll_interval)
                     continue
 
                 window_identity = (
@@ -477,12 +522,19 @@ class ActivityTracker:
                     self.start_activity(window)
                     self.last_window = window_identity
 
+                # Save long-running activities without waiting for a window switch.
+                self.checkpoint_activity()
+
                 # Count eligible working time on each polling cycle.
                 self.check_reminder(active=True)
 
-                time.sleep(self.poll_interval)
+                self.last_completed_poll_time = time.monotonic()
+                self.stop_event.wait(self.poll_interval)
 
         except KeyboardInterrupt:
+            self.stop_event.set()
+
+        finally:
             if self.current_activity:
                 self.finish_activity()
 

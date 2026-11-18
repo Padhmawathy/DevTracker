@@ -1,15 +1,184 @@
-
 @import "tailwindcss";
 
+/* ==========================================================
+   DevTrack design foundation — minimal, Apple-style.
+   Semantic colour tokens live in page-theme.css (--dx-*, --ui-*).
+   ========================================================== */
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 22px;
+}
+
 :root {
-  font-family: Inter, system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100%;
 }
 
 body {
-  margin: 0;
-  min-width: 320px;
-  background: #0b1120;
-  color: #f8fafc;
+  background: var(--ui-page);
+  color: var(--dx-heading);
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: var(--dx-accent-soft);
+}
+
+:focus-visible {
+  outline: 2px solid var(--dx-accent);
+  outline-offset: 2px;
+}
+
+/* Quiet, overlay-style scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-fill-strong) transparent;
+}
+
+/* ---------- shared components ---------- */
+
+@layer components {
+
+.ui-card {
+  background: var(--dx-surface);
+  border-radius: 16px;
+  box-shadow: var(--ui-shadow);
+}
+
+.ui-input {
+  width: 100%;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 14px;
+  color: var(--dx-heading);
+  background: var(--dx-input);
+  box-shadow: inset 0 0 0 1px var(--dx-border-strong);
+  outline: none;
+  transition: box-shadow 0.15s ease;
+}
+.ui-input::placeholder {
+  color: var(--ui-tertiary);
+}
+.ui-input:focus,
+.ui-input:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 1px var(--dx-accent),
+    0 0 0 3px var(--dx-accent-soft);
+}
+select.ui-input {
+  appearance: none;
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1 1 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+select option {
+  background: var(--dx-surface);
+  color: var(--dx-heading);
+}
+
+.ui-btn,
+.ui-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+.ui-btn {
+  background: var(--ui-fill);
+  color: var(--dx-heading);
+}
+.ui-btn:hover {
+  background: var(--ui-fill-strong);
+}
+.ui-btn-primary {
+  background: var(--dx-accent);
+  color: var(--dx-accent-contrast);
+}
+.ui-btn-primary:hover {
+  background: var(--dx-accent-hover);
+}
+.ui-btn:disabled,
+.ui-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* iOS-style switch for checkbox inputs */
+.ui-switch {
+  appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 42px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--ui-fill-strong);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.ui-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s ease;
+}
+.ui-switch:checked {
+  background: var(--dx-success);
+}
+.ui-switch:checked::after {
+  transform: translateX(16px);
+}
+.ui-switch:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ui-eyebrow {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ui-secondary);
+}
+}
+
+input[type="range"],
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--dx-accent);
 }

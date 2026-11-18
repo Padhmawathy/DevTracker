@@ -1,20 +1,26 @@
 
-import os
+"""Entry point for Windows reminder notification actions."""
+
 import sys
 from pathlib import Path
 
-# Find the project folder, regardless of where Windows
-# starts this script.
-PROJECT_ROOT = Path(__file__).resolve().parent
 
-# Ensure DevTracker's source package can be imported.
-sys.path.insert(
-    0,
-    str(PROJECT_ROOT / "src"),
-)
+def prepare_development_imports():
+    """Allow direct script execution during development.
 
-# Ensure the SQLite queue uses the project's data folder.
-os.chdir(PROJECT_ROOT)
+    Packaged applications already contain the devtrack package.
+    """
+    if getattr(sys, "frozen", False):
+        return
+
+    project_root = Path(__file__).resolve().parent
+    source_directory = project_root / "src"
+
+    if str(source_directory) not in sys.path:
+        sys.path.insert(0, str(source_directory))
+
+
+prepare_development_imports()
 
 from devtrack.reminders.action_handler import main
 
