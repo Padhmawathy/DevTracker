@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 
 export type Page =
   | "overview"
+  | "tasks"
   | "activity"
   | "checkins"
   | "calendar"
@@ -15,7 +16,7 @@ interface TopNavProps {
 
 const TABS: { id: Page; label: string }[] = [
   { id: "overview", label: "Overview" },
-  { id: "activity", label: "Activity" },
+  { id: "tasks", label: "Tasks" },
   { id: "checkins", label: "Check-ins" },
   { id: "calendar", label: "Calendar" },
   { id: "reports", label: "Reports" },

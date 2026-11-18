@@ -30,6 +30,7 @@ from devtrack.storage.job_store import (
     SQLiteJobStore,
     WorkEntryNotFoundError,
 )
+from devtrack.storage.task_store import SQLiteTaskStore, TaskNotFoundError
 from typing import Literal
 
 app = FastAPI(
@@ -520,6 +521,59 @@ def delete_work_entry(entry_id: int):
     except LookupError as exc:
         raise _job_error(exc) from exc
     return {"status": "deleted", "id": entry_id}
+
+
+# ------------------------------------------
+# Tasks
+# ------------------------------------------
+
+
+class TaskRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    notes: str | None = Field(default=None, max_length=4000)
+    due_date: date | None = None
+    priority: Literal["none", "low", "medium", "high"] = "none"
+    status: Literal["todo", "in_progress", "done"] = "todo"
+    job_id: int | None = None
+
+
+def _task_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, TaskNotFoundError):
+        return HTTPException(status_code=404, detail="Task not found.")
+    if isinstance(exc, JobNotFoundError):
+        return HTTPException(status_code=404, detail="Job not found.")
+    return HTTPException(status_code=422, detail=str(exc))
+
+
+@app.get("/api/tasks")
+def list_tasks():
+    return {"tasks": SQLiteTaskStore().list_tasks()}
+
+
+@app.post("/api/tasks", status_code=201)
+def create_task(payload: TaskRequest):
+    try:
+        return SQLiteTaskStore().create_task(**payload.model_dump())
+    except (ValueError, LookupError) as exc:
+        raise _task_error(exc) from exc
+
+
+@app.put("/api/tasks/{task_id}")
+def update_task(task_id: int, payload: TaskRequest):
+    try:
+        return SQLiteTaskStore().update_task(task_id, **payload.model_dump())
+    except (ValueError, LookupError) as exc:
+        raise _task_error(exc) from exc
+
+
+# The desktop proxy only forwards GET/POST/PUT, so deletion is a POST.
+@app.post("/api/tasks/{task_id}/delete")
+def delete_task(task_id: int):
+    try:
+        SQLiteTaskStore().delete_task(task_id)
+    except LookupError as exc:
+        raise _task_error(exc) from exc
+    return {"status": "deleted", "id": task_id}
 
 
 # ------------------------------------------
