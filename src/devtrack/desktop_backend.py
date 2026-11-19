@@ -175,7 +175,12 @@ def main():
 
         app.state.desktop_api_token = token
 
-    run_backend(managed=managed)
+    if managed:
+        # The installed app always talks to the backend on 8000.
+        run_backend(managed=True)
+    else:
+        # DEVTRACK_PORT lets a dev backend run beside the installed app.
+        run_backend(port=int(os.environ.get("DEVTRACK_PORT", "8000")))
 
 
 
