@@ -8,7 +8,11 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:8000",
+        // DEVTRACK_PORT (or a full DEVTRACK_API URL) lets a dev backend
+        // run beside the installed app.
+        target:
+          process.env.DEVTRACK_API ??
+          `http://127.0.0.1:${process.env.DEVTRACK_PORT ?? "8000"}`,
         changeOrigin: true,
       },
     },

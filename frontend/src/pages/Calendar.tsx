@@ -401,7 +401,10 @@ export default function Calendar() {
             <button
               type="button"
               aria-pressed={jobFilter === "all"}
-              onClick={() => setJobFilter("all")}
+              onClick={() => {
+                setJobFilter("all");
+                setPanel("day");
+              }}
               className={`${chip} ${jobFilter === "all" ? chipOn : chipOff}`}
             >
               All jobs
@@ -411,7 +414,12 @@ export default function Calendar() {
                 key={job.id}
                 type="button"
                 aria-pressed={jobFilter === job.id}
-                onClick={() => setJobFilter(jobFilter === job.id ? "all" : job.id)}
+                onClick={() => {
+                  // Picking a job leaves Manage. While managing, a click
+                  // returns to the job instead of toggling it off.
+                  setJobFilter(panel === "day" && jobFilter === job.id ? "all" : job.id);
+                  setPanel("day");
+                }}
                 className={`${chip} ${jobFilter === job.id ? chipOn : chipOff}`}
               >
                 <JobMark color={job.color} emoji={job.emoji} size="sm" />
@@ -470,14 +478,14 @@ export default function Calendar() {
                       <span
                         key={e.id}
                         className={`cal-event ${e.status === "planned" ? "is-planned" : ""}`}
-                        title={`${e.job_name}: ${e.description}`}
+                        title={`${e.description} (${e.job_name})`}
                       >
                         {e.job_emoji ? (
                           <JobMark emoji={e.job_emoji} size="xs" />
                         ) : (
                           <span className="cal-event-dot" style={{ backgroundColor: e.job_color, color: e.job_color }} />
                         )}
-                        <span className="truncate">{e.platform ? PLATFORM_LABELS[e.platform] : e.job_name}</span>
+                        <span className="truncate">{e.description.trim() || (e.platform ? PLATFORM_LABELS[e.platform] : e.job_name)}</span>
                       </span>
                     ))}
                     {items.length > 2 && (
