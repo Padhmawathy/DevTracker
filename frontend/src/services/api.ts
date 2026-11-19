@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { IS_MOBILE } from "../lib/platform";
 
 type DesktopApiResponse = {
   status: number;
@@ -12,6 +13,20 @@ export async function apiFetch(
   input: string,
   init?: RequestInit
 ): Promise<Response> {
+  // The phone app has no backend: answer from the on-device store.
+  if (IS_MOBILE) {
+    const { localRequest } = await import("./localBackend");
+    const result = await localRequest({
+      path: input,
+      method: init?.method ?? "GET",
+      body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
+    });
+    return new Response(JSON.stringify(result.body), {
+      status: result.status,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   if (!IS_PACKAGED_DESKTOP) {
     return window.fetch(input, init);
   }
@@ -502,6 +517,8 @@ export async function deleteWorkEntry(id: number): Promise<void> {
 // ==========================================
 
 export type TaskStatus = "todo" | "in_progress" | "done";
+/** How often a phone task or event repeats. */
+export type Repeat = "none" | "daily" | "weekdays" | "weekly" | "monthly" | "yearly";
 export type TaskPriority = "none" | "low" | "medium" | "high";
 
 export interface Task {
@@ -518,6 +535,10 @@ export interface Task {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  /** Phone app only: local "YYYY-MM-DDTHH:MM" to send a reminder. */
+  remind_at?: string | null;
+  /** Phone app only: when done, the next one is created automatically. */
+  repeat?: Repeat;
 }
 
 export interface TaskPayload {
@@ -527,6 +548,10 @@ export interface TaskPayload {
   priority: TaskPriority;
   status: TaskStatus;
   job_id: number | null;
+  /** Phone app only. Leave out to keep the current reminder. */
+  remind_at?: string | null;
+  /** Phone app only. Leave out to keep the current setting. */
+  repeat?: Repeat;
 }
 
 export async function getTasks(): Promise<Task[]> {
@@ -545,4 +570,95 @@ export function updateTask(id: number, payload: TaskPayload): Promise<Task> {
 
 export async function deleteTask(id: number): Promise<void> {
   await sendJson(`/api/tasks/${id}/delete`, "POST", {}, "Failed to delete task");
+}
+
+// ==========================================
+// NOTES (phone app; stored on the device)
+// ==========================================
+
+export type NoteColor = "none" | "yellow" | "green" | "blue" | "pink" | "purple";
+
+export interface Note {
+  id: number;
+  title: string;
+  body: string;
+  pinned: boolean;
+  color: NoteColor;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NotePayload {
+  title: string;
+  body: string;
+  pinned: boolean;
+  color: NoteColor;
+}
+
+export async function getNotes(): Promise<Note[]> {
+  const response = await apiFetch("/api/notes");
+  if (!response.ok) throw await readError(response, "Failed to load notes");
+  return (await response.json()).notes;
+}
+
+export function createNote(payload: NotePayload): Promise<Note> {
+  return sendJson("/api/notes", "POST", payload, "Failed to save note");
+}
+
+export function updateNote(id: number, payload: NotePayload): Promise<Note> {
+  return sendJson(`/api/notes/${id}`, "PUT", payload, "Failed to save note");
+}
+
+export async function deleteNote(id: number): Promise<void> {
+  await sendJson(`/api/notes/${id}/delete`, "POST", {}, "Failed to delete note");
+}
+
+// ==========================================
+// PERSONAL CALENDAR EVENTS (phone app)
+// ==========================================
+
+export type EventColor = "blue" | "green" | "orange" | "red" | "purple" | "pink" | "teal" | "graphite";
+
+export interface CalendarEvent {
+  id: number;
+  title: string;
+  date: string;
+  /** "HH:MM", or null for an all-day event. */
+  start_time: string | null;
+  end_time: string | null;
+  color: EventColor;
+  notes: string | null;
+  /** Minutes before the start to send a reminder (all-day: before 9:00), or null. */
+  alert: number | null;
+  repeat: Repeat;
+  /** Last date a repeating event happens on (inclusive), or null for forever. */
+  repeat_until: string | null;
+  /** For a repeating event in a date range: the date the series started. */
+  series_start?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type EventPayload = Pick<
+  CalendarEvent,
+  "title" | "date" | "start_time" | "end_time" | "color" | "notes" | "alert" | "repeat" | "repeat_until"
+>;
+
+export async function getEvents(start: string, end: string): Promise<CalendarEvent[]> {
+  const params = new URLSearchParams({ start, end });
+  const response = await apiFetch(`/api/events?${params}`);
+  if (!response.ok) throw await readError(response, "Failed to load events");
+  return (await response.json()).events;
+}
+
+export function createEvent(payload: EventPayload): Promise<CalendarEvent> {
+  return sendJson("/api/events", "POST", payload, "Failed to save event");
+}
+
+export function updateEvent(id: number, payload: EventPayload): Promise<CalendarEvent> {
+  return sendJson(`/api/events/${id}`, "PUT", payload, "Failed to save event");
+}
+
+export async function deleteEvent(id: number): Promise<void> {
+  await sendJson(`/api/events/${id}/delete`, "POST", {}, "Failed to delete event");
 }

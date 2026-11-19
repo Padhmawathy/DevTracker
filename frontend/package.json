@@ -7,13 +7,18 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "test:mobile": "node --test tests/localStore.test.ts tests/backup.test.ts tests/reminders.test.ts tests/repeat.test.ts"
   },
   "dependencies": {
     "@fontsource/geist-sans": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-deep-link": "^2.6.2",
+    "@tauri-apps/plugin-dialog": "^2.8.4",
+    "@tauri-apps/plugin-fs": "^2.7.1",
+    "@tauri-apps/plugin-notification": "^2.8.1",
     "@tauri-apps/plugin-shell": "^2.5.0",
     "lucide-react": "^1.54.0",
     "react": "^19.2.8",

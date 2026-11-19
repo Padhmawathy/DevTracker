@@ -5,6 +5,8 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // Lets the app know it is being built for Android (TAURI_ENV_PLATFORM).
+  envPrefix: ["VITE_", "TAURI_ENV_"],
   server: {
     proxy: {
       "/api": {

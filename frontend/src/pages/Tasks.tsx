@@ -8,10 +8,14 @@ import {
   type Job,
   type Task,
   type TaskPayload,
+  type Repeat,
   type TaskPriority,
   type TaskStatus,
 } from "../services/api";
 import JobMark from "../components/JobMark";
+import { useBackClose } from "../lib/useBackClose";
+import { IS_MOBILE } from "../lib/platform";
+import { ensureNotificationPermission } from "../services/reminders";
 import "./calendar.css";
 
 type SmartList = "today" | "scheduled" | "all" | "completed";
@@ -74,7 +78,20 @@ type Draft = {
   priority: TaskPriority;
   status: TaskStatus;
   job_id: string;
+  /** Phone only: "YYYY-MM-DDTHH:MM" or "". */
+  remind_at: string;
+  /** Phone only. */
+  repeat: Repeat;
 };
+
+const TASK_REPEATS: { value: Repeat; label: string }[] = [
+  { value: "none", label: "Never" },
+  { value: "daily", label: "Every day" },
+  { value: "weekdays", label: "Every weekday" },
+  { value: "weekly", label: "Every week" },
+  { value: "monthly", label: "Every month" },
+  { value: "yearly", label: "Every year" },
+];
 
 function toDraft(task: Task): Draft {
   return {
@@ -84,6 +101,8 @@ function toDraft(task: Task): Draft {
     priority: task.priority,
     status: task.status,
     job_id: task.job_id == null ? "" : String(task.job_id),
+    remind_at: task.remind_at ?? "",
+    repeat: task.repeat ?? "none",
   };
 }
 
@@ -95,6 +114,7 @@ function draftToPayload(draft: Draft): TaskPayload {
     priority: draft.priority,
     status: draft.status,
     job_id: draft.job_id ? Number(draft.job_id) : null,
+    ...(IS_MOBILE ? { remind_at: draft.remind_at || null, repeat: draft.repeat } : {}),
   };
 }
 
@@ -106,6 +126,7 @@ function taskToPayload(task: Task, overrides: Partial<TaskPayload> = {}): TaskPa
     priority: task.priority,
     status: task.status,
     job_id: task.job_id,
+    ...(IS_MOBILE ? { remind_at: task.remind_at ?? null, repeat: task.repeat ?? "none" } : {}),
     ...overrides,
   };
 }
@@ -248,6 +269,7 @@ export default function Tasks() {
       const updated = await updateTask(task.id, taskToPayload(task, { status }));
       replaceTask(updated);
       if (selectedId === task.id) setDraft(toDraft(updated));
+      if (status === "done" && task.repeat && task.repeat !== "none") setRefreshKey((k) => k + 1);
     } catch (err) {
       setError((err as Error).message);
     }
@@ -263,10 +285,14 @@ export default function Tasks() {
     setSaving(true);
     setError("");
     try {
+      const allowed = !IS_MOBILE || !draft.remind_at || (await ensureNotificationPermission());
       const updated = await updateTask(selectedTask.id, draftToPayload(draft));
       replaceTask(updated);
       setDraft(toDraft(updated));
       setRefreshKey((k) => k + 1);
+      if (!allowed) {
+        setError("Saved, but notifications are off for DevTrack, so the reminder won’t ring. Turn them on in Android Settings → Apps → DevTrack.");
+      }
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -326,11 +352,13 @@ export default function Tasks() {
               )}
               {task.title}
             </p>
-            {(due || task.job_name || task.status === "in_progress" || task.notes) && (
+            {(due || task.job_name || task.status === "in_progress" || task.notes || (task.remind_at && !done) || (task.repeat && task.repeat !== "none" && !done)) && (
               <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-[var(--ui-secondary)]">
                 {task.status === "in_progress" && (
                   <span className="font-medium text-[var(--dx-accent-text)]">In progress</span>
                 )}
+                {task.repeat && task.repeat !== "none" && !done && <span aria-label="Repeats">🔁</span>}
+                {task.remind_at && !done && <span aria-label="Has a reminder">🔔</span>}
                 {due && (
                   <span className={due.overdue && !done ? "text-[var(--dx-danger)]" : ""}>{due.text}</span>
                 )}
@@ -350,6 +378,15 @@ export default function Tasks() {
   }
 
   const detailsOpen = !!selectedTask && !!draft;
+  const detailsRef = useRef<HTMLElement | null>(null);
+  useBackClose(detailsOpen, () => selectTask(null));
+
+  // On narrow screens the details sit below the list: bring them into view.
+  useEffect(() => {
+    if (selectedId !== null && window.innerWidth < 1024) {
+      detailsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [selectedId]);
 
   return (
     <div className="cal flex flex-col gap-4 lg:h-full">
@@ -455,7 +492,7 @@ export default function Tasks() {
 
         {/* ---------------- Details (only when a task is selected) ---------------- */}
         {detailsOpen && selectedTask && draft && (
-          <aside className="cal-card flex flex-col p-5 lg:min-h-0">
+          <aside ref={detailsRef} className="cal-card flex scroll-mt-4 flex-col p-5 lg:min-h-0">
             <form onSubmit={handleSave} className="flex min-h-0 flex-1 flex-col gap-4">
               <div className="flex shrink-0 items-center justify-between">
                 <button type="button" className="cal-link-btn is-danger" onClick={() => void handleDelete()}>
@@ -508,6 +545,46 @@ export default function Tasks() {
                       </button>
                     )}
                   </label>
+                  {IS_MOBILE && (
+                    <label className="cal-row">
+                      <span className="cal-row-label">Remind</span>
+                      <input
+                        type="datetime-local"
+                        value={draft.remind_at}
+                        onChange={(e) => setDraft({ ...draft, remind_at: e.target.value.slice(0, 16) })}
+                        className="cal-field"
+                        aria-label="Remind me at"
+                      />
+                      {draft.remind_at ? (
+                        <button type="button" className="cal-link-btn shrink-0" onClick={() => setDraft({ ...draft, remind_at: "" })}>
+                          Clear
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="cal-link-btn shrink-0"
+                          onClick={() => setDraft({ ...draft, remind_at: `${draft.due_date || today}T09:00` })}
+                        >
+                          Add
+                        </button>
+                      )}
+                    </label>
+                  )}
+                  {IS_MOBILE && (
+                    <label className="cal-row">
+                      <span className="cal-row-label">Repeat</span>
+                      <select
+                        value={draft.repeat}
+                        onChange={(e) => setDraft({ ...draft, repeat: e.target.value as Repeat })}
+                        className="cal-field"
+                      >
+                        {TASK_REPEATS.map((r) => (
+                          <option key={r.value} value={r.value}>{r.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  {(editorJobs.length > 0 || draft.job_id !== "") && (
                   <label className="cal-row">
                     <span className="cal-row-label">Job</span>
                     <select value={draft.job_id} onChange={(e) => setDraft({ ...draft, job_id: e.target.value })} className="cal-field">
@@ -517,6 +594,7 @@ export default function Tasks() {
                       ))}
                     </select>
                   </label>
+                  )}
                   <label className="cal-row">
                     <span className="cal-row-label">Priority</span>
                     <select
