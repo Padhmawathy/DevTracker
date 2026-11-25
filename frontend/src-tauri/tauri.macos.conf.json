@@ -1,0 +1,23 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "app": {
+    "windows": [
+      {
+        "title": "DevTrack",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 1000,
+        "minHeight": 650,
+        "center": true,
+        "resizable": true,
+        "fullscreen": false,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": {
+          "x": 20,
+          "y": 23
+        }
+      }
+    ]
+  }
+}

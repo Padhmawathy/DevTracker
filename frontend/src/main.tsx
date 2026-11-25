@@ -4,7 +4,7 @@ import "./index.css";
 import { initializeTheme } from "./theme";
 import App from "./App.tsx";
 import MobileApp from "./MobileApp";
-import { IS_MOBILE } from "./lib/platform";
+import { IS_MACOS, IS_MOBILE } from "./lib/platform";
 import AppIcon from "./components/AppIcon";
 import {
   getTrackerSettings,
@@ -14,6 +14,8 @@ import {
 import "./page-theme.css";
 // Apply the saved appearance before rendering the interface.
 initializeTheme();
+// Lets CSS adapt to the platform, e.g. room for the macOS window buttons.
+if (IS_MACOS && !IS_MOBILE) document.documentElement.dataset.platform = "macos";
 const DISMISSED_KEY = "devtrack.consent-declined.v1";
 
 type Screen = "loading" | "welcome" | "app" | "error";

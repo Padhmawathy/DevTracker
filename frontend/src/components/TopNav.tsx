@@ -57,8 +57,13 @@ export default function TopNav({ activePage, onNavigate }: TopNavProps) {
   const settingsActive = activePage === "settings";
 
   return (
-    <header className="sticky top-0 z-40 shrink-0 bg-[var(--ui-toolbar)] shadow-[inset_0_-0.5px_0_var(--ui-hairline)] backdrop-blur-2xl backdrop-saturate-150">
-      <div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:px-8 md:h-[60px] md:flex-nowrap md:py-0">
+    // On macOS the bar doubles as the window's title bar: its empty space
+    // drags the window and the window buttons sit in its left padding.
+    <header
+      data-tauri-drag-region
+      className="dt-titlebar sticky top-0 z-40 shrink-0 select-none bg-[var(--ui-toolbar)] shadow-[inset_0_-0.5px_0_var(--ui-hairline)] backdrop-blur-2xl backdrop-saturate-150"
+    >
+      <div data-tauri-drag-region className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 sm:px-8 md:h-[60px] md:flex-nowrap md:py-0">
         {/* Brand */}
         <button
           type="button"
@@ -120,7 +125,7 @@ export default function TopNav({ activePage, onNavigate }: TopNavProps) {
         </nav>
 
         {/* Balances the brand column so the switcher stays centred on desktop */}
-        <span className="hidden md:block md:w-[132px]" aria-hidden="true" />
+        <span data-tauri-drag-region className="hidden md:block md:w-[132px]" aria-hidden="true" />
       </div>
     </header>
   );
