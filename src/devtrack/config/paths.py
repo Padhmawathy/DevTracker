@@ -7,6 +7,24 @@ from pathlib import Path
 APP_NAME = "DevTrack"
 
 
+def current_platform() -> str:
+    """Return sys.platform; a seam so tests can pick an operating system."""
+    return sys.platform
+
+
+def get_log_directory() -> Path:
+    """Return the directory for the desktop backend's log files."""
+    if current_platform() == "darwin":
+        return Path.home() / "Library" / "Logs" / APP_NAME
+
+    local_app_data = os.environ.get("LOCALAPPDATA")
+
+    if local_app_data:
+        return Path(local_app_data) / APP_NAME / "logs"
+
+    return get_data_directory() / "logs"
+
+
 def is_packaged() -> bool:
     """Check whether DevTrack is running as a packaged executable."""
     return bool(getattr(sys, "frozen", False))
@@ -16,6 +34,14 @@ def get_data_directory() -> Path:
     """Return the writable directory for application data."""
 
     if is_packaged():
+        if current_platform() == "darwin":
+            return (
+                Path.home()
+                / "Library"
+                / "Application Support"
+                / APP_NAME
+            )
+
         local_app_data = os.environ.get("LOCALAPPDATA")
 
         if not local_app_data:

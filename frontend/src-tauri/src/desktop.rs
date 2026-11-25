@@ -141,6 +141,12 @@ fn quit_app(app_handle: &tauri::AppHandle) {
     });
 }
 
+#[cfg(target_os = "macos")]
+const TRAY_HINT: &str = "Tracking continues in the background. To exit, click the DevTrack icon in the menu bar and choose Quit DevTrack.";
+
+#[cfg(not(target_os = "macos"))]
+const TRAY_HINT: &str = "Tracking continues in the background. To exit, click ^ next to the clock, right-click the DevTrack icon and choose Quit DevTrack.";
+
 /// The first time the window is hidden, explain that tracking continues in the tray.
 fn notify_hidden_to_tray_once(app: &tauri::AppHandle) {
     use tauri_plugin_notification::NotificationExt;
@@ -158,7 +164,7 @@ fn notify_hidden_to_tray_once(app: &tauri::AppHandle) {
         .notification()
         .builder()
         .title("DevTrack is still tracking")
-        .body("Tracking continues in the background. To exit, click ^ next to the clock, right-click the DevTrack icon and choose Quit DevTrack.")
+        .body(TRAY_HINT)
         .show();
 
     if shown.is_ok() {
@@ -241,7 +247,8 @@ pub fn run() {
             }
         })
         .setup(|app| {
-            // Log to stdout and %LOCALAPPDATA%\com.devtrack.desktop\logs in all builds.
+            // Log to stdout and the OS log folder in all builds
+            // (%LOCALAPPDATA%\com.devtrack.desktop\logs, ~/Library/Logs/com.devtrack.desktop).
             app.handle().plugin(
                 tauri_plugin_log::Builder::default()
                     .level(log::LevelFilter::Info)
@@ -335,6 +342,26 @@ pub fn run() {
                 notify_hidden_to_tray_once(app_handle);
             }
         })
-        .run(tauri::generate_context!())
-        .expect("error while building tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            #[cfg(target_os = "macos")]
+            match event {
+                // Clicking the Dock icon brings the hidden window back.
+                tauri::RunEvent::Reopen { .. } => show_main_window(app_handle),
+                // Cmd+Q and the app menu's Quit: let the collector save the
+                // current activity first, as the tray's Quit does. quit_app
+                // ends with app.exit(code), which arrives here with a code.
+                tauri::RunEvent::ExitRequested { code: None, api, .. } => {
+                    if app_handle.try_state::<BackendProcess>().is_some() {
+                        api.prevent_exit();
+                        quit_app(app_handle);
+                    }
+                }
+                _ => {}
+            }
+
+            #[cfg(not(target_os = "macos"))]
+            let _ = (app_handle, event);
+        });
 }

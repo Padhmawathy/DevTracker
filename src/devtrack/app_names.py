@@ -46,6 +46,20 @@ APP_NAMES = {
     "calc.exe": "Calculator",
     "snippingtool.exe": "Snipping Tool",
     "searchhost.exe": "Windows Search",
+    # macOS reports the app's own name (no .exe); only names that need
+    # changing are listed, the rest are shown as macOS reports them.
+    "code": "Visual Studio Code",
+    "electron": "Visual Studio Code",
+    "iterm2": "iTerm",
+    "brave browser": "Brave Browser",
+    "firefox": "Mozilla Firefox",
+    "telegram": "Telegram Desktop",
+    "zoom.us": "Zoom Workplace",
+    "idea": "IntelliJ IDEA",
+    "pycharm": "PyCharm",
+    "webstorm": "WebStorm",
+    "teams": "Microsoft Teams",
+    "msteams": "Microsoft Teams",
 }
 def resolve_app_name(process_name: str) -> str:
     raw = (process_name or "").strip()

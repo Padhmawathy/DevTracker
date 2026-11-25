@@ -11,9 +11,10 @@ import uvicorn
 
 from devtrack.api.main import app
 from devtrack.collector.tracker import ActivityTracker
+from devtrack.config.paths import get_log_directory
 
 def configure_backend_logging():
-    log_dir = Path(os.environ["LOCALAPPDATA"]) / "DevTrack" / "logs"
+    log_dir = get_log_directory()
     log_dir.mkdir(parents=True, exist_ok=True)
     logger = logging.getLogger()
     if not any(

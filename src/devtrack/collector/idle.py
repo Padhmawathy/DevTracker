@@ -1,27 +1,32 @@
-import ctypes
-from ctypes import wintypes
+import sys
 
 
-class LASTINPUTINFO(ctypes.Structure):
-    _fields_ = [
-        ("cbSize", wintypes.UINT),
-        ("dwTime", wintypes.DWORD),
-    ]
+if sys.platform == "darwin":
+    from devtrack.collector.macos import get_idle_seconds
 
+else:
+    import ctypes
+    from ctypes import wintypes
 
-def get_idle_seconds():
-    last_input_info = LASTINPUTINFO()
-    last_input_info.cbSize = ctypes.sizeof(LASTINPUTINFO)
+    class LASTINPUTINFO(ctypes.Structure):
+        _fields_ = [
+            ("cbSize", wintypes.UINT),
+            ("dwTime", wintypes.DWORD),
+        ]
 
-    if not ctypes.windll.user32.GetLastInputInfo(
-        ctypes.byref(last_input_info)
-    ):
-        raise RuntimeError("Unable to read Windows input state")
+    def get_idle_seconds():
+        last_input_info = LASTINPUTINFO()
+        last_input_info.cbSize = ctypes.sizeof(LASTINPUTINFO)
 
-    tick_count = ctypes.windll.kernel32.GetTickCount()
+        if not ctypes.windll.user32.GetLastInputInfo(
+            ctypes.byref(last_input_info)
+        ):
+            raise RuntimeError("Unable to read Windows input state")
 
-    idle_milliseconds = (
-        tick_count - last_input_info.dwTime
-    )
+        tick_count = ctypes.windll.kernel32.GetTickCount()
 
-    return idle_milliseconds / 1000
+        idle_milliseconds = (
+            tick_count - last_input_info.dwTime
+        )
+
+        return idle_milliseconds / 1000

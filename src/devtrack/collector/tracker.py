@@ -9,7 +9,7 @@ from devtrack.models.activity import Activity
 from devtrack.collector.session import is_workstation_locked
 from devtrack.storage.settings_store import JSONSettingsStore
 from devtrack.reminders.engine import ReminderEngine
-from devtrack.reminders.notifier import WindowsNotifier
+from devtrack.reminders.notifier import create_notifier
 from devtrack.reminders.state import ReminderState
 from devtrack.reminders.state_store import JSONReminderStateStore
 from devtrack.reminders.action_queue import ReminderActionQueue
@@ -65,7 +65,7 @@ class ActivityTracker:
         self.collect_window_titles = True
 
         self.reminder_engine = ReminderEngine()
-        self.notifier = WindowsNotifier()
+        self.notifier = create_notifier()
         self.current_settings = None
 
         self.reminder_action_queue = None

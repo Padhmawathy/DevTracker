@@ -4,6 +4,16 @@ SENSITIVE_PROCESSES = {
     "whatsapp.exe",
     "telegram.exe",
     "whatsapp.root.exe",
+    # macOS app names
+    "mail",
+    "messages",
+    "microsoft outlook",
+    "microsoft teams",
+    "teams",
+    "msteams",
+    "whatsapp",
+    "telegram",
+    "signal",
 }
 
 BROWSER_PROCESSES = {
@@ -11,6 +21,13 @@ BROWSER_PROCESSES = {
     "msedge.exe",
     "firefox.exe",
     "brave.exe",
+    # macOS app names
+    "google chrome",
+    "safari",
+    "microsoft edge",
+    "firefox",
+    "brave browser",
+    "arc",
 }
 
 
@@ -50,7 +67,7 @@ def normalize_window_title(process_name: str, title: str) -> str:
     process_name = process_name.lower()
 
     # VS Code adds this marker when a file has unsaved changes.
-    if process_name == "code.exe":
+    if process_name in {"code.exe", "code"}:
         title = title.lstrip("● ").strip()
 
     return title

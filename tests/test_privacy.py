@@ -37,6 +37,20 @@ class TestPrivacy(unittest.TestCase):
         )
         self.assertEqual(result, "main.py - DevTracker")
 
+    def test_mac_messaging_app_title_redacted(self):
+        result = sanitize_window_title(
+            "Messages",
+            "Private conversation",
+        )
+        self.assertEqual(result, "[REDACTED]")
+
+    def test_mac_vscode_title_normalized(self):
+        result = normalize_window_title(
+            "Code",
+            "● main.py - DevTracker",
+        )
+        self.assertEqual(result, "main.py - DevTracker")
+
 
 if __name__ == "__main__":
     unittest.main()

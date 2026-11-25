@@ -1,9 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
+import sys
+
 from PyInstaller.utils.hooks import collect_submodules
 
 hiddenimports = []
 hiddenimports += collect_submodules('uvicorn')
-hiddenimports += collect_submodules('winotify')
+
+if sys.platform == 'darwin':
+    hiddenimports += ['Quartz']
+else:
+    hiddenimports += collect_submodules('winotify')
 
 
 a = Analysis(
@@ -39,12 +45,15 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
 )
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='DevTrackBackend',
-)
+# The folder copy is only made on Windows: on macOS the one-file executable
+# is dist/DevTrackBackend, which a dist/DevTrackBackend folder would clash with.
+if sys.platform != 'darwin':
+  coll = COLLECT(
+      exe,
+      a.binaries,
+      a.datas,
+      strip=False,
+      upx=True,
+      upx_exclude=[],
+      name='DevTrackBackend',
+  )

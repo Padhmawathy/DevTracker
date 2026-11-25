@@ -1,0 +1,112 @@
+# Builds the DevTrack macOS app on GitHub's Apple Silicon (arm64) runners.
+#
+# Output (workflow artifact): DevTrack-<version>-macos-arm64.dmg holding
+# DevTrack.app with the tracking backend inside it.
+#
+# The app is ad-hoc signed, not notarized (that needs a paid Apple Developer
+# account). The first time, open it with right-click > Open, or run
+#   xattr -dr com.apple.quarantine /Applications/DevTrack.app
+#
+# Run it by pushing a version tag (e.g. `git push origin v0.1.8`), pushing to
+# feature/macos, or, once this file is on the default branch, from the
+# Actions tab ("Run workflow").
+
+name: macOS release build
+
+on:
+  push:
+    tags:
+      - "v*"
+    # Also build every push to the macOS branch, so it can be tested
+    # before the workflow reaches the default branch.
+    branches:
+      - feature/macos
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements-build.txt
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: frontend/src-tauri -> target
+
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements-build.txt
+
+      - name: Run backend tests
+        env:
+          PYTHONPATH: src
+        run: python -m pytest -q
+
+      - name: Check the macOS collector loads
+        env:
+          PYTHONPATH: src
+        run: |
+          python -c "from devtrack.collector import foreground, idle, session; print('idle seconds:', idle.get_idle_seconds()); print('locked:', session.is_workstation_locked()); print('window:', foreground.get_active_window())"
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      # The backend bundles frontend/dist, so build the frontend first.
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Build backend (PyInstaller)
+        run: python -m PyInstaller DevTrackBackend.spec --noconfirm
+
+      - name: Place backend sidecar for Tauri
+        run: |
+          mkdir -p frontend/src-tauri/binaries
+          cp dist/DevTrackBackend frontend/src-tauri/binaries/DevTrackBackend-aarch64-apple-darwin
+          chmod +x frontend/src-tauri/binaries/DevTrackBackend-aarch64-apple-darwin
+
+      - name: Build desktop app (Tauri)
+        working-directory: frontend
+        run: npx tauri build --bundles app,dmg
+
+      - name: Collect release files
+        id: collect
+        run: |
+          version=$(python -c "import json; print(json.load(open('frontend/src-tauri/tauri.conf.json'))['version'])")
+          name="DevTrack-$version-macos-arm64"
+          mkdir -p "out/$name"
+          cp frontend/src-tauri/target/release/bundle/dmg/*.dmg "out/$name/$name.dmg"
+          (cd "out/$name" && shasum -a 256 *.dmg > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.collect.outputs.name }}
+          path: out/${{ steps.collect.outputs.name }}
+          if-no-files-found: error
+          retention-days: 30

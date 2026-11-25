@@ -7,6 +7,7 @@ from unittest.mock import patch
 from devtrack.config.paths import (
     get_data_directory,
     get_data_path,
+    get_log_directory,
 )
 
 
@@ -27,6 +28,9 @@ class TestApplicationPaths(unittest.TestCase):
             with patch(
                 "devtrack.config.paths.is_packaged",
                 return_value=True,
+            ), patch(
+                "devtrack.config.paths.current_platform",
+                return_value="win32",
             ):
                 with patch.dict(
                     "os.environ",
@@ -65,6 +69,9 @@ class TestApplicationPaths(unittest.TestCase):
         with patch(
             "devtrack.config.paths.is_packaged",
             return_value=True,
+        ), patch(
+            "devtrack.config.paths.current_platform",
+            return_value="win32",
         ):
             with patch.dict(
                 "os.environ",
@@ -73,6 +80,30 @@ class TestApplicationPaths(unittest.TestCase):
             ):
                 with self.assertRaises(RuntimeError):
                     get_data_directory()
+
+    def test_packaged_mac_uses_application_support(self):
+        with TemporaryDirectory() as folder:
+            with patch(
+                "devtrack.config.paths.is_packaged",
+                return_value=True,
+            ), patch(
+                "devtrack.config.paths.current_platform",
+                return_value="darwin",
+            ), patch(
+                "devtrack.config.paths.Path.home",
+                return_value=Path(folder),
+            ):
+                directory = get_data_directory()
+                log_directory = get_log_directory()
+
+            self.assertEqual(
+                directory,
+                Path(folder) / "Library" / "Application Support" / "DevTrack",
+            )
+            self.assertEqual(
+                log_directory,
+                Path(folder) / "Library" / "Logs" / "DevTrack",
+            )
 
 
 if __name__ == "__main__":
