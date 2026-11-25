@@ -93,6 +93,27 @@ jobs:
         working-directory: frontend
         run: npx tauri build --bundles app,dmg
 
+      # Start the backend exactly as packaged and signed inside the app and
+      # check it answers, so a build that cannot start never ships.
+      - name: Smoke-test the packaged backend
+        run: |
+          app=$(ls -d frontend/src-tauri/target/release/bundle/macos/*.app | head -n1)
+          backend="$app/Contents/MacOS/DevTrackBackend"
+          ls -l "$app/Contents/MacOS"
+          codesign -dv "$backend" 2>&1 || true
+          DEVTRACK_PORT=8765 "$backend" > backend-smoke.log 2>&1 &
+          pid=$!
+          ok=0
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8765/api/health; then ok=1; break; fi
+            if ! kill -0 $pid 2>/dev/null; then break; fi
+            sleep 1
+          done
+          kill $pid 2>/dev/null || true
+          echo "----- backend output -----"
+          cat backend-smoke.log
+          test $ok = 1
+
       - name: Collect release files
         id: collect
         run: |
