@@ -45,7 +45,9 @@ function DevTrackStartup() {
         );
       } catch {
         if (cancelled) return;
-        if (attempt < 8) {
+        // Allow ~45 s: on macOS the first launch unpacks the backend and
+        // Gatekeeper scans it, which can take well over ten seconds.
+        if (attempt < 45) {
           retry = setTimeout(() => setAttempt((value) => value + 1), 1000);
         } else {
           setMessage("DevTrack could not connect to its local backend.");
