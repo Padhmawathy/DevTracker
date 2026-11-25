@@ -6,8 +6,11 @@ type DesktopApiResponse = {
   body: string;
 };
 
+// The installed app serves its pages from http://tauri.localhost on Windows
+// and tauri://localhost on macOS.
 const IS_PACKAGED_DESKTOP =
-  window.location.hostname === "tauri.localhost";
+  window.location.hostname === "tauri.localhost" ||
+  window.location.protocol === "tauri:";
 
 export async function apiFetch(
   input: string,
